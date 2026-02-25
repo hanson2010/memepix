@@ -27,6 +27,7 @@ export default function Home() {
   const [filterCategory, setFilterCategory] = useState('')
   const [selectedMeme, setSelectedMeme] = useState<Meme | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   const handleUploadComplete = useCallback(async (imageUrl: string) => {
     setUploadState({ status: 'analyzing', imageUrl })
@@ -108,17 +109,23 @@ export default function Home() {
     setLocationSuggestion(undefined)
   }
 
+  const handleNavClick = (newView: 'browse' | 'upload') => {
+    setView(newView)
+    setMobileMenuOpen(false)
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
+      <header className="bg-white shadow sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 py-3 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-gray-900">MemePix</h1>
-            <div className="flex items-center gap-4">
-              <nav className="flex gap-4">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">MemePix</h1>
+            
+            <div className="hidden sm:flex items-center gap-4">
+              <nav className="flex gap-2">
                 <button
-                  onClick={() => setView('browse')}
-                  className={`px-4 py-2 rounded-lg transition-colors ${
+                  onClick={() => handleNavClick('browse')}
+                  className={`px-4 py-2 rounded-lg transition-colors min-h-[44px] ${
                     view === 'browse'
                       ? 'bg-blue-600 text-white'
                       : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
@@ -129,11 +136,11 @@ export default function Home() {
                 <button
                   onClick={() => {
                     if (session) {
-                      setView('upload')
+                      handleNavClick('upload')
                     }
                   }}
                   disabled={!session}
-                  className={`px-4 py-2 rounded-lg transition-colors ${
+                  className={`px-4 py-2 rounded-lg transition-colors min-h-[44px] ${
                     view === 'upload'
                       ? 'bg-blue-600 text-white'
                       : session
@@ -147,13 +154,62 @@ export default function Home() {
               </nav>
               <AuthButton />
             </div>
+
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="sm:hidden p-2 rounded-lg hover:bg-gray-100 min-h-[44px] min-w-[44px] flex items-center justify-center"
+              aria-label="Toggle menu"
+            >
+              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {mobileMenuOpen ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                )}
+              </svg>
+            </button>
           </div>
+
+          {mobileMenuOpen && (
+            <nav className="sm:hidden pt-3 pb-2 border-t mt-3 space-y-2">
+              <button
+                onClick={() => handleNavClick('browse')}
+                className={`w-full px-4 py-3 rounded-lg transition-colors text-left min-h-[48px] ${
+                  view === 'browse'
+                    ? 'bg-blue-600 text-white'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Browse
+              </button>
+              <button
+                onClick={() => {
+                  if (session) {
+                    handleNavClick('upload')
+                  }
+                }}
+                disabled={!session}
+                className={`w-full px-4 py-3 rounded-lg transition-colors text-left min-h-[48px] ${
+                  view === 'upload'
+                    ? 'bg-blue-600 text-white'
+                    : session
+                    ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                Upload {!session && '(Sign in required)'}
+              </button>
+              <div className="pt-2">
+                <AuthButton />
+              </div>
+            </nav>
+          )}
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+      <main className="max-w-7xl mx-auto px-4 py-4 sm:py-8 sm:px-6 lg:px-8">
         {view === 'browse' ? (
-          <div className="space-y-6">
+          <div className="space-y-4 sm:space-y-6">
             <CategoryFilter value={filterCategory} onChange={setFilterCategory} />
             <MemeGallery
               key={refreshKey}
@@ -162,16 +218,16 @@ export default function Home() {
             />
           </div>
         ) : !session ? (
-          <div className="max-w-2xl mx-auto text-center py-12">
+          <div className="max-w-2xl mx-auto text-center py-8 sm:py-12">
             <p className="text-gray-600 mb-4">Please sign in to upload and share pictures.</p>
             <AuthButton />
           </div>
         ) : (
-          <div className="max-w-2xl mx-auto space-y-6">
+          <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
             {!uploadState.imageUrl ? (
               <UploadForm onUploadComplete={handleUploadComplete} />
             ) : (
-              <div className="space-y-6">
+              <div className="space-y-4 sm:space-y-6">
                 <ImagePreview
                   src={uploadState.imageUrl}
                   onRemove={handleReset}
@@ -222,17 +278,17 @@ export default function Home() {
                       <TagInput value={tags} onChange={setTags} />
                     </div>
 
-                    <div className="flex gap-4 pt-4">
+                    <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4">
                       <button
                         onClick={handleSave}
                         disabled={saving || !description || !category}
-                        className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        className="flex-1 px-4 py-3 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors min-h-[44px]"
                       >
                         {saving ? 'Saving...' : 'Save Meme'}
                       </button>
                       <button
                         onClick={handleReset}
-                        className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors"
+                        className="px-4 py-3 sm:py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-colors min-h-[44px]"
                       >
                         Cancel
                       </button>

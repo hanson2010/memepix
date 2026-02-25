@@ -19,7 +19,7 @@ describe('UploadForm', () => {
   it('should render upload area', () => {
     render(<UploadForm onUploadComplete={mockOnUploadComplete} />)
     
-    expect(screen.getByText(/drag and drop an image here/i)).toBeInTheDocument()
+    expect(screen.getByText(/tap to select or drag and drop/i)).toBeInTheDocument()
   })
 
   it('should show supported formats', () => {

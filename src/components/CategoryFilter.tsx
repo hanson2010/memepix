@@ -6,9 +6,9 @@ interface CategoryFilterProps {
 }
 
 const CATEGORIES = [
-  { id: 'machine-translation-fails', name: 'Machine Translation Fails' },
+  { id: 'machine-translation-fails', name: 'Translation Fails' },
   { id: 'city-skyline', name: 'City Skyline' },
-  { id: 'natural-landscape', name: 'Natural Landscape' },
+  { id: 'natural-landscape', name: 'Landscape' },
   { id: 'life-style', name: 'Life Style' },
   { id: 'others', name: 'Others' },
 ]
@@ -18,10 +18,10 @@ export function CategoryFilter({ value, onChange }: CategoryFilterProps) {
     <div className="flex flex-wrap gap-2">
       <button
         onClick={() => onChange('')}
-        className={`px-3 py-1 rounded-full text-sm transition-colors ${
+        className={`px-4 py-2 rounded-full text-sm transition-colors min-h-[44px] ${
           !value
             ? 'bg-blue-600 text-white'
-            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            : 'bg-gray-100 text-gray-700 hover:bg-gray-200 active:bg-gray-300'
         }`}
       >
         All
@@ -30,10 +30,10 @@ export function CategoryFilter({ value, onChange }: CategoryFilterProps) {
         <button
           key={category.id}
           onClick={() => onChange(value === category.id ? '' : category.id)}
-          className={`px-3 py-1 rounded-full text-sm transition-colors ${
+          className={`px-4 py-2 rounded-full text-sm transition-colors min-h-[44px] ${
             value === category.id
               ? 'bg-blue-600 text-white'
-              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              : 'bg-gray-100 text-gray-700 hover:bg-gray-200 active:bg-gray-300'
           }`}
         >
           {category.name}

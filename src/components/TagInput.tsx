@@ -34,26 +34,28 @@ export function TagInput({ value, onChange, suggestions = [] }: TagInputProps) {
 
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap gap-2">
-        {value.map((tag) => (
-          <span
-            key={tag}
-            className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
-          >
-            {tag}
-            <button
-              type="button"
-              onClick={() => removeTag(tag)}
-              className="hover:text-blue-600"
-              aria-label={`Remove ${tag}`}
+      {value.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {value.map((tag) => (
+            <span
+              key={tag}
+              className="inline-flex items-center gap-1 px-3 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
             >
-              <svg className="h-3 w-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </span>
-        ))}
-      </div>
+              {tag}
+              <button
+                type="button"
+                onClick={() => removeTag(tag)}
+                className="hover:text-blue-600 p-1 min-h-[28px] min-w-[28px] flex items-center justify-center"
+                aria-label={`Remove ${tag}`}
+              >
+                <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
 
       <div className="relative">
         <input
@@ -62,11 +64,11 @@ export function TagInput({ value, onChange, suggestions = [] }: TagInputProps) {
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
           placeholder="Type a tag and press Enter"
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full px-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]"
         />
 
         {input && suggestions.length > 0 && (
-          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg">
+          <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-auto">
             {suggestions
               .filter((s) => s.toLowerCase().includes(input.toLowerCase()))
               .slice(0, 5)
@@ -75,7 +77,7 @@ export function TagInput({ value, onChange, suggestions = [] }: TagInputProps) {
                   key={suggestion}
                   type="button"
                   onClick={() => addTag(suggestion)}
-                  className="w-full px-3 py-2 text-left hover:bg-gray-100"
+                  className="w-full px-3 py-3 text-left hover:bg-gray-100 min-h-[48px]"
                 >
                   {suggestion}
                 </button>

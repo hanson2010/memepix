@@ -55,9 +55,10 @@ export function UploadForm({ onUploadComplete }: UploadFormProps) {
       const { uploadUrl, imageUrl } = await res.json()
 
       try {
+        const arrayBuffer = await normalized.blob.arrayBuffer()
         const uploadRes = await fetch(uploadUrl, {
           method: 'PUT',
-          body: normalized.blob,
+          body: arrayBuffer,
           headers: { 'Content-Type': 'image/jpeg' },
         })
 
@@ -129,7 +130,7 @@ export function UploadForm({ onUploadComplete }: UploadFormProps) {
   return (
     <div className="w-full">
       <div
-        className={`relative border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors ${
+        className={`relative border-2 border-dashed rounded-lg p-6 sm:p-8 text-center cursor-pointer transition-colors min-h-[160px] flex items-center justify-center ${
           dragActive
             ? 'border-blue-500 bg-blue-50'
             : 'border-gray-300 hover:border-gray-400'
@@ -144,13 +145,14 @@ export function UploadForm({ onUploadComplete }: UploadFormProps) {
           ref={inputRef}
           type="file"
           accept="image/jpeg,image/png,image/gif,image/webp"
+          capture="environment"
           onChange={handleChange}
           className="hidden"
         />
         <div className="space-y-2">
           <div className="text-gray-600">
             <svg
-              className="mx-auto h-12 w-12"
+              className="mx-auto h-10 w-10 sm:h-12 sm:w-12"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -163,10 +165,10 @@ export function UploadForm({ onUploadComplete }: UploadFormProps) {
               />
             </svg>
           </div>
-          <p className="text-gray-700">
-            Drag and drop an image here, or click to select
+          <p className="text-gray-700 text-sm sm:text-base">
+            Tap to select or drag and drop
           </p>
-          <p className="text-sm text-gray-500">
+          <p className="text-xs sm:text-sm text-gray-500">
             JPEG, PNG, GIF, or WebP (max 10MB)
           </p>
         </div>

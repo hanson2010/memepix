@@ -72,19 +72,19 @@ export function MemeGallery({ initialMemes = EMPTY_MEMES, category, tags, onSele
 
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
         {memes.map((meme) => (
           <div
             key={meme.id}
             onClick={() => onSelect?.(meme)}
-            className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all"
+            className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all active:scale-[0.98]"
           >
             <Image
               src={meme.imageUrl}
               alt={meme.description}
               fill
               className="object-cover"
-              sizes="(max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
             />
           </div>
         ))}
@@ -100,7 +100,7 @@ export function MemeGallery({ initialMemes = EMPTY_MEMES, category, tags, onSele
         <div className="flex justify-center py-4">
           <button
             onClick={loadMore}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+            className="px-6 py-3 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors min-h-[44px]"
           >
             Load More
           </button>
