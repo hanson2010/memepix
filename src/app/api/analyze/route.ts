@@ -34,10 +34,24 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    console.log('Analyzing image:', imageUrl)
+
     const model = getVisionModel()
 
     const controller = new AbortController()
     const timeoutId = setTimeout(() => controller.abort(), ANALYSIS_TIMEOUT)
+
+    let imageData
+    try {
+      imageData = await fetchImageAsBase64(imageUrl)
+    } catch (fetchError) {
+      console.error('Failed to fetch image for analysis:', fetchError)
+      return NextResponse.json({
+        hasTranslation: false,
+        description: '',
+        locationHint: '',
+      })
+    }
 
     try {
       const result = await Promise.race([
@@ -45,8 +59,8 @@ export async function POST(request: NextRequest) {
           { text: TRANSLATION_PROMPT },
           {
             inlineData: {
-              mimeType: 'image/jpeg',
-              data: await fetchImageAsBase64(imageUrl),
+              mimeType: imageData.mimeType,
+              data: imageData.data,
             },
           },
         ]),
@@ -97,8 +111,25 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function fetchImageAsBase64(url: string): Promise<string> {
-  const response = await fetch(url)
-  const buffer = await response.arrayBuffer()
-  return Buffer.from(buffer).toString('base64')
+async function fetchImageAsBase64(url: string): Promise<{ data: string; mimeType: string }> {
+  try {
+    const response = await fetch(url, {
+      headers: {
+        'User-Agent': 'MemePix/1.0',
+      },
+    })
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`)
+    }
+    
+    const contentType = response.headers.get('content-type') || 'image/jpeg'
+    const buffer = await response.arrayBuffer()
+    const data = Buffer.from(buffer).toString('base64')
+    
+    return { data, mimeType: contentType }
+  } catch (error) {
+    console.error('Error fetching image:', url, error)
+    throw error
+  }
 }

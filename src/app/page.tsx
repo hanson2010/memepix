@@ -42,12 +42,19 @@ export default function Home() {
         const data = await res.json()
         setDescription(data.description || '')
         setLocationSuggestion(data.locationHint || undefined)
+        
+        const defaultCategory = data.hasTranslation 
+          ? 'machine-translation-fails' 
+          : 'others'
+        setCategory(defaultCategory)
+        
         setUploadState({
           status: 'ready',
           imageUrl,
           aiSuggestion: {
             description: data.description,
             locationTag: data.locationHint,
+            hasTranslation: data.hasTranslation,
           },
         })
       } else {
@@ -181,7 +188,7 @@ export default function Home() {
                   <>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Description
+                        Description <span className="text-red-500">*</span>
                       </label>
                       <DescriptionInput
                         value={description}
@@ -192,7 +199,7 @@ export default function Home() {
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Category
+                        Category <span className="text-red-500">*</span>
                       </label>
                       <CategorySelect value={category} onChange={setCategory} />
                     </div>
@@ -239,7 +246,12 @@ export default function Home() {
       </main>
 
       {selectedMeme && (
-        <MemeDetail meme={selectedMeme} onClose={() => setSelectedMeme(null)} />
+        <MemeDetail 
+          meme={selectedMeme} 
+          onClose={() => setSelectedMeme(null)} 
+          currentUserEmail={session?.user?.email ?? undefined}
+          onDeleted={() => setRefreshKey((k) => k + 1)}
+        />
       )}
     </div>
   )

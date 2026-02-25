@@ -5,6 +5,7 @@ export interface Meme {
   category: string
   tags: string[]
   locationTag?: string
+  uploadedBy?: string
   createdAt: Date
   updatedAt: Date
 }
@@ -15,6 +16,7 @@ export interface MemeInput {
   category: string
   tags: string[]
   locationTag?: string
+  uploadedBy?: string
 }
 
 export interface Category {
@@ -37,5 +39,6 @@ export interface UploadState {
   aiSuggestion?: {
     description?: string
     locationTag?: string
+    hasTranslation?: boolean
   }
 }

@@ -1,6 +1,5 @@
 'use client'
 
-import Image from 'next/image'
 import { useState } from 'react'
 
 interface ImagePreviewProps {
@@ -14,7 +13,7 @@ export function ImagePreview({ src, alt = 'Preview', onRemove }: ImagePreviewPro
   const [hasError, setHasError] = useState(false)
 
   return (
-    <div className="relative w-full max-w-md mx-auto">
+    <div className="relative w-full">
       <div className="relative aspect-video bg-gray-100 rounded-lg overflow-hidden">
         {isLoading && !hasError && (
           <div className="absolute inset-0 flex items-center justify-center">
@@ -23,15 +22,15 @@ export function ImagePreview({ src, alt = 'Preview', onRemove }: ImagePreviewPro
         )}
         
         {hasError ? (
-          <div className="absolute inset-0 flex items-center justify-center text-red-500">
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-red-500 gap-2">
             <p>Failed to load image</p>
+            <p className="text-xs text-gray-500">{src}</p>
           </div>
         ) : (
-          <Image
+          <img
             src={src}
             alt={alt}
-            fill
-            className={`object-contain transition-opacity duration-200 ${
+            className={`w-full h-full object-contain transition-opacity duration-200 ${
               isLoading ? 'opacity-0' : 'opacity-100'
             }`}
             onLoad={() => setIsLoading(false)}

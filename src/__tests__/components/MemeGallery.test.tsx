@@ -1,5 +1,5 @@
-import { describe, it, expect, jest, beforeEach } from '@jest/globals'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals'
+import { render, screen, waitFor } from '@testing-library/react'
 import { MemeGallery } from '@/components/MemeGallery'
 
 describe('MemeGallery', () => {
@@ -26,18 +26,37 @@ describe('MemeGallery', () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    global.fetch = jest.fn(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve([]),
+      } as Response)
+    )
   })
 
-  it('should render memes in grid', () => {
+  afterEach(() => {
+    jest.restoreAllMocks()
+  })
+
+  it('should render memes in grid', async () => {
+    ;(global.fetch as jest.Mock).mockImplementationOnce(() =>
+      Promise.resolve({
+        ok: true,
+        json: () => Promise.resolve(mockMemes),
+      } as Response)
+    )
+    
     render(<MemeGallery initialMemes={mockMemes} />)
     
     const images = screen.getAllByRole('img')
     expect(images).toHaveLength(2)
   })
 
-  it('should show empty state when no memes', () => {
+  it('should show empty state when no memes', async () => {
     render(<MemeGallery initialMemes={[]} />)
     
-    expect(screen.getByText(/no memes found/i)).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByText(/no memes found/i)).toBeInTheDocument()
+    })
   })
 })

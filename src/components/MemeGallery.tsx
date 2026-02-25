@@ -33,10 +33,24 @@ export function MemeGallery({ initialMemes = EMPTY_MEMES, category, tags, onSele
   }, [category, tags])
 
   useEffect(() => {
-    setMemes(initialMemes)
-    setPage(0)
-    setHasMore(true)
-  }, [category, tags, initialMemes])
+    async function loadInitialMemes() {
+      setLoading(true)
+      try {
+        const newMemes = await fetchMemes(0)
+        setMemes(newMemes)
+        if (newMemes.length < PAGE_SIZE) {
+          setHasMore(false)
+        }
+        setPage(0)
+      } catch (error) {
+        console.error('Failed to load memes:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadInitialMemes()
+  }, [category, tags, fetchMemes])
 
   const loadMore = useCallback(async () => {
     if (loading || !hasMore) return

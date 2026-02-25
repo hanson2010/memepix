@@ -7,10 +7,21 @@ import type { Meme } from '@/types'
 interface MemeDetailProps {
   meme: Meme
   onClose: () => void
+  currentUserEmail?: string
+  onDeleted?: () => void
 }
 
-export function MemeDetail({ meme, onClose }: MemeDetailProps) {
+const CATEGORY_NAMES: Record<string, string> = {
+  'machine-translation-fails': 'Machine Translation Fails',
+  'city-skyline': 'City Skyline',
+  'natural-landscape': 'Natural Landscape',
+  'life-style': 'Life Style',
+  'others': 'Others',
+}
+
+export function MemeDetail({ meme, onClose, currentUserEmail, onDeleted }: MemeDetailProps) {
   const [copied, setCopied] = useState(false)
+  const [deleting, setDeleting] = useState(false)
 
   const shareUrl = typeof window !== 'undefined' 
     ? `${window.location.origin}/meme/${meme.id}`
@@ -25,6 +36,33 @@ export function MemeDetail({ meme, onClose }: MemeDetailProps) {
       console.error('Failed to copy:', error)
     }
   }
+
+  const handleDelete = async () => {
+    if (!confirm('Are you sure you want to delete this meme?')) return
+    
+    setDeleting(true)
+    try {
+      const res = await fetch(`/api/memes/${meme.id}`, {
+        method: 'DELETE',
+      })
+      
+      if (res.ok) {
+        onDeleted?.()
+        onClose()
+      } else {
+        const data = await res.json()
+        alert(data.error || 'Failed to delete')
+      }
+    } catch (error) {
+      console.error('Failed to delete:', error)
+      alert('Failed to delete')
+    } finally {
+      setDeleting(false)
+    }
+  }
+
+  const categoryName = CATEGORY_NAMES[meme.category] || meme.category
+  const canDelete = currentUserEmail && meme.uploadedBy && meme.uploadedBy.toLowerCase() === currentUserEmail.toLowerCase()
 
   return (
     <div 
@@ -46,14 +84,16 @@ export function MemeDetail({ meme, onClose }: MemeDetailProps) {
         </button>
 
         <div className="md:flex">
-          <div className="md:w-2/3 relative aspect-video md:aspect-auto md:min-h-[400px]">
-            <Image
-              src={meme.imageUrl}
-              alt={meme.description}
-              fill
-              className="object-contain"
-              sizes="(max-width: 768px) 100vw, 66vw"
-            />
+          <div className="md:w-2/3 relative aspect-video md:aspect-auto md:min-h-[400px] bg-gray-200">
+            <div className="absolute inset-0 m-3">
+              <Image
+                src={meme.imageUrl}
+                alt={meme.description}
+                fill
+                className="object-contain"
+                sizes="(max-width: 768px) 100vw, 66vw"
+              />
+            </div>
           </div>
 
           <div className="md:w-1/3 p-6 space-y-4">
@@ -64,7 +104,7 @@ export function MemeDetail({ meme, onClose }: MemeDetailProps) {
 
             <div>
               <h3 className="text-sm font-medium text-gray-500">Category</h3>
-              <p className="mt-1 text-gray-700">{meme.category}</p>
+              <p className="mt-1 text-gray-700">{categoryName}</p>
             </div>
 
             {meme.tags.length > 0 && (
@@ -74,7 +114,7 @@ export function MemeDetail({ meme, onClose }: MemeDetailProps) {
                   {meme.tags.map((tag) => (
                     <span
                       key={tag}
-                      className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"
+                      className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm capitalize"
                     >
                       {tag}
                     </span>
@@ -90,7 +130,7 @@ export function MemeDetail({ meme, onClose }: MemeDetailProps) {
               </div>
             )}
 
-            <div className="pt-4 border-t">
+            <div className="pt-4 border-t space-y-2">
               <button
                 onClick={handleCopy}
                 className="w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2"
@@ -111,6 +151,19 @@ export function MemeDetail({ meme, onClose }: MemeDetailProps) {
                   </>
                 )}
               </button>
+              
+              {canDelete && (
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="w-full px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50"
+                >
+                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  {deleting ? 'Deleting...' : 'Delete Meme'}
+                </button>
+              )}
             </div>
           </div>
         </div>

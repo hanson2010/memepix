@@ -1,45 +1,19 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-import type { Category } from '@/types'
-
 interface CategoryFilterProps {
   value: string
   onChange: (value: string) => void
 }
 
+const CATEGORIES = [
+  { id: 'machine-translation-fails', name: 'Machine Translation Fails' },
+  { id: 'city-skyline', name: 'City Skyline' },
+  { id: 'natural-landscape', name: 'Natural Landscape' },
+  { id: 'life-style', name: 'Life Style' },
+  { id: 'others', name: 'Others' },
+]
+
 export function CategoryFilter({ value, onChange }: CategoryFilterProps) {
-  const [categories, setCategories] = useState<Category[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    async function fetchCategories() {
-      try {
-        const res = await fetch('/api/categories')
-        if (res.ok) {
-          const data = await res.json()
-          setCategories(data)
-        }
-      } catch (error) {
-        console.error('Failed to fetch categories:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchCategories()
-  }, [])
-
-  if (loading) {
-    return (
-      <div className="animate-pulse flex gap-2">
-        <div className="h-8 w-20 bg-gray-200 rounded"></div>
-        <div className="h-8 w-20 bg-gray-200 rounded"></div>
-        <div className="h-8 w-20 bg-gray-200 rounded"></div>
-      </div>
-    )
-  }
-
   return (
     <div className="flex flex-wrap gap-2">
       <button
@@ -52,7 +26,7 @@ export function CategoryFilter({ value, onChange }: CategoryFilterProps) {
       >
         All
       </button>
-      {categories.map((category) => (
+      {CATEGORIES.map((category) => (
         <button
           key={category.id}
           onClick={() => onChange(value === category.id ? '' : category.id)}

@@ -10,6 +10,7 @@ jest.mock('@/lib/env', () => ({
     R2_SECRET_ACCESS_KEY: 'test-secret-key',
     R2_BUCKET_NAME: 'test-bucket',
     R2_PUBLIC_URL: 'https://test.r2.dev',
+    R2_ENDPOINT: 'https://test.r2.cloudflarestorage.com',
   })),
 }))
 
@@ -23,14 +24,13 @@ describe('R2 Presigned URL', () => {
   })
 
   describe('POST /api/upload', () => {
-    it('should reject invalid content types', async () => {
+    it('should reject invalid hash format', async () => {
       const { POST } = await import('@/app/api/upload/route')
       
       const request = new NextRequest('http://localhost/api/upload', {
         method: 'POST',
         body: JSON.stringify({
-          filename: 'test.pdf',
-          contentType: 'application/pdf',
+          hash: 'invalid-hash',
         }),
       })
       
@@ -38,10 +38,10 @@ describe('R2 Presigned URL', () => {
       const data = await response.json()
       
       expect(response.status).toBe(400)
-      expect(data.error).toContain('Invalid content type')
+      expect(data.error).toContain('Invalid hash format')
     })
 
-    it('should reject missing parameters', async () => {
+    it('should reject missing hash', async () => {
       const { POST } = await import('@/app/api/upload/route')
       
       const request = new NextRequest('http://localhost/api/upload', {
@@ -53,7 +53,26 @@ describe('R2 Presigned URL', () => {
       const data = await response.json()
       
       expect(response.status).toBe(400)
-      expect(data.error).toContain('Missing')
+      expect(data.error).toContain('Missing hash')
+    })
+
+    it('should generate presigned URL for valid hash', async () => {
+      const { POST } = await import('@/app/api/upload/route')
+      
+      const request = new NextRequest('http://localhost/api/upload', {
+        method: 'POST',
+        body: JSON.stringify({
+          hash: 'a'.repeat(16),
+        }),
+      })
+      
+      const response = await POST(request)
+      const data = await response.json()
+      
+      expect(response.status).toBe(200)
+      expect(data.uploadUrl).toBeDefined()
+      expect(data.imageUrl).toContain('https://test.r2.dev')
+      expect(data.key).toMatch(/^\d{4}\/\d{2}\/[a-f0-9]{16}\.jpg$/)
     })
   })
 })

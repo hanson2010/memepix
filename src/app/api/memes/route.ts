@@ -64,6 +64,7 @@ export async function POST(request: NextRequest) {
       category,
       tags: tags || [],
       locationTag: locationTag?.toLowerCase().trim() || undefined,
+      uploadedBy: session.user?.email || undefined,
     }
     
     const meme = await createMeme(input)

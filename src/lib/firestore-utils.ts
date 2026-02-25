@@ -29,6 +29,7 @@ export function toMeme(doc: FirebaseFirestore.DocumentSnapshot): Meme | null {
     category: data?.category || '',
     tags: data?.tags || [],
     locationTag: data?.locationTag,
+    uploadedBy: data?.uploadedBy,
     createdAt: timestampToDate(data?.createdAt),
     updatedAt: timestampToDate(data?.updatedAt),
   }
