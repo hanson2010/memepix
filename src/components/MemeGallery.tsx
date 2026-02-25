@@ -35,6 +35,7 @@ export function MemeGallery({ initialMemes = EMPTY_MEMES, category, tags, onSele
   useEffect(() => {
     async function loadInitialMemes() {
       setLoading(true)
+      setHasMore(true)
       try {
         const newMemes = await fetchMemes(0)
         setMemes(newMemes)

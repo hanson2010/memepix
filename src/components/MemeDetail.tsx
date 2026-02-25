@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 import type { Meme } from '@/types'
 
 interface MemeDetailProps {
@@ -13,8 +14,8 @@ interface MemeDetailProps {
 
 const CATEGORY_NAMES: Record<string, string> = {
   'machine-translation-fails': 'Machine Translation Fails',
-  'city-skyline': 'City Skyline',
   'natural-landscape': 'Natural Landscape',
+  'city-skyline': 'City Skyline',
   'life-style': 'Life Style',
   'others': 'Others',
 }
@@ -70,33 +71,44 @@ export function MemeDetail({ meme, onClose, currentUserEmail, onDeleted }: MemeD
       onClick={onClose}
     >
       <div 
-        className="relative bg-white w-full sm:max-w-4xl sm:w-full sm:rounded-lg min-h-screen sm:min-h-0 sm:max-h-[90vh] overflow-auto"
+        className="relative bg-white w-full sm:max-w-4xl sm:w-full sm:rounded-lg min-h-screen sm:min-h-0 sm:max-h-[90vh] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
-        <button
-          onClick={onClose}
-          className="absolute top-3 right-3 z-10 bg-white/80 rounded-full p-2 hover:bg-white min-h-[44px] min-w-[44px] flex items-center justify-center"
-          aria-label="Close"
-        >
-          <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-          </svg>
-        </button>
+        <div className="absolute top-3 right-3 z-10 flex gap-2">
+          <Link
+            href={`/meme/${meme.id}`}
+            className="bg-white/80 rounded-full p-2 hover:bg-white min-h-[44px] min-w-[44px] flex items-center justify-center"
+            aria-label="Open in new page"
+          >
+            <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+            </svg>
+          </Link>
+          <button
+            onClick={onClose}
+            className="bg-white/80 rounded-full p-2 hover:bg-white min-h-[44px] min-w-[44px] flex items-center justify-center"
+            aria-label="Close"
+          >
+            <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
 
-        <div className="flex flex-col md:flex-row">
-          <div className="relative aspect-video md:flex-1 md:min-h-[400px] bg-gray-200">
+        <div className="flex flex-col md:flex-row h-full">
+          <div className="relative aspect-video md:w-[60%] md:min-h-[400px] bg-gray-200">
             <div className="absolute inset-0 m-2 sm:m-3">
               <Image
                 src={meme.imageUrl}
                 alt={meme.description}
                 fill
                 className="object-contain"
-                sizes="(max-width: 768px) 100vw, 66vw"
+                sizes="(max-width: 768px) 100vw, 60vw"
               />
             </div>
           </div>
 
-          <div className="md:w-1/3 p-4 sm:p-6 space-y-4">
+          <div className="md:w-[40%] p-4 sm:p-6 space-y-4 overflow-auto">
             <div>
               <h2 className="text-lg font-semibold text-gray-900">Description</h2>
               <p className="mt-1 text-gray-700">{meme.description}</p>
@@ -133,21 +145,21 @@ export function MemeDetail({ meme, onClose, currentUserEmail, onDeleted }: MemeD
             <div className="pt-4 border-t space-y-3">
               <button
                 onClick={handleCopy}
-                className="w-full px-4 py-3 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 min-h-[44px]"
+                className="w-full px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center gap-2 min-h-[44px] whitespace-nowrap"
               >
                 {copied ? (
                   <>
-                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="h-5 w-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                     </svg>
-                    Copied!
+                    <span>Copied!</span>
                   </>
                 ) : (
                   <>
-                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="h-5 w-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                     </svg>
-                    Copy Share Link
+                    <span>Copy Share Link</span>
                   </>
                 )}
               </button>
@@ -156,12 +168,12 @@ export function MemeDetail({ meme, onClose, currentUserEmail, onDeleted }: MemeD
                 <button
                   onClick={handleDelete}
                   disabled={deleting}
-                  className="w-full px-4 py-3 sm:py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 min-h-[44px]"
+                  className="w-full px-4 py-3 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-50 min-h-[44px] whitespace-nowrap"
                 >
-                  <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="h-5 w-5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
-                  {deleting ? 'Deleting...' : 'Delete Meme'}
+                  <span>{deleting ? 'Deleting...' : 'Delete Meme'}</span>
                 </button>
               )}
             </div>

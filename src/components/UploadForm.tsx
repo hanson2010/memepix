@@ -54,21 +54,17 @@ export function UploadForm({ onUploadComplete }: UploadFormProps) {
 
       const { uploadUrl, imageUrl } = await res.json()
 
-      try {
-        const arrayBuffer = await normalized.blob.arrayBuffer()
-        const uploadRes = await fetch(uploadUrl, {
-          method: 'PUT',
-          body: arrayBuffer,
-          headers: { 'Content-Type': 'image/jpeg' },
-        })
+      const arrayBuffer = await normalized.blob.arrayBuffer()
+      const uploadRes = await fetch(uploadUrl, {
+        method: 'PUT',
+        body: arrayBuffer,
+        headers: { 
+          'Content-Type': 'image/jpeg',
+          'Content-Length': String(arrayBuffer.byteLength),
+        },
+      })
 
-        if (!uploadRes.ok) {
-          throw new Error('CORS fallback')
-        }
-
-        setState({ status: 'ready', imageUrl })
-        onUploadComplete(imageUrl)
-      } catch {
+      if (!uploadRes.ok) {
         const formData = new FormData()
         formData.append('file', normalized.blob)
         formData.append('hash', hash)
@@ -87,7 +83,11 @@ export function UploadForm({ onUploadComplete }: UploadFormProps) {
         const { imageUrl: proxyImageUrl } = await proxyRes.json()
         setState({ status: 'ready', imageUrl: proxyImageUrl })
         onUploadComplete(proxyImageUrl)
+        return
       }
+
+      setState({ status: 'ready', imageUrl })
+      onUploadComplete(imageUrl)
     } catch (err) {
       setState({
         status: 'error',

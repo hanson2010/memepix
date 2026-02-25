@@ -54,11 +54,14 @@ export async function POST(request: NextRequest) {
     const now = new Date()
     const key = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${hash}.jpg`
 
+    const arrayBuffer = await file.arrayBuffer()
+    const buffer = Buffer.from(arrayBuffer)
+
     const client = getR2Client()
     const command = new PutObjectCommand({
       Bucket: env.R2_BUCKET_NAME,
       Key: key,
-      Body: file,
+      Body: buffer,
       ContentType: 'image/jpeg',
     })
 

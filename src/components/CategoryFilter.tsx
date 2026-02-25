@@ -7,8 +7,8 @@ interface CategoryFilterProps {
 
 const CATEGORIES = [
   { id: 'machine-translation-fails', name: 'Translation Fails' },
-  { id: 'city-skyline', name: 'City Skyline' },
   { id: 'natural-landscape', name: 'Landscape' },
+  { id: 'city-skyline', name: 'City Skyline' },
   { id: 'life-style', name: 'Life Style' },
   { id: 'others', name: 'Others' },
 ]

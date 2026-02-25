@@ -102,7 +102,7 @@ export async function listMemes(options?: {
   limit?: number
   offset?: number
 }): Promise<Meme[]> {
-  let query = memesCollection().orderBy('createdAt', 'desc')
+  let query = memesCollection()
   
   if (options?.category) {
     query = query.where('category', '==', options.category)
@@ -111,6 +111,8 @@ export async function listMemes(options?: {
   if (options?.tags && options.tags.length > 0) {
     query = query.where('tags', 'array-contains-any', options.tags)
   }
+  
+  query = query.orderBy('createdAt', 'desc')
   
   if (options?.limit) {
     query = query.limit(options.limit)

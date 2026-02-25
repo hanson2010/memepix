@@ -1,9 +1,9 @@
 'use client'
 
 import Image from 'next/image'
+import Link from 'next/link'
 import { useState } from 'react'
 import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
 import type { Meme } from '@/types'
 
 interface MemeDetailPageProps {
@@ -20,7 +20,6 @@ const CATEGORY_NAMES: Record<string, string> = {
 
 export function MemeDetailPage({ meme }: MemeDetailPageProps) {
   const { data: session } = useSession()
-  const router = useRouter()
   const [copied, setCopied] = useState(false)
   const [deleting, setDeleting] = useState(false)
 
@@ -44,7 +43,7 @@ export function MemeDetailPage({ meme }: MemeDetailPageProps) {
       })
       
       if (res.ok) {
-        router.push('/')
+        window.location.href = '/'
       } else {
         const data = await res.json()
         alert(data.error || 'Failed to delete')
@@ -63,15 +62,15 @@ export function MemeDetailPage({ meme }: MemeDetailPageProps) {
   return (
     <div className="min-h-screen bg-gray-50 py-4 sm:py-8">
       <div className="max-w-4xl mx-auto px-4">
-        <button
-          onClick={() => router.back()}
-          className="mb-4 flex items-center gap-2 text-gray-600 hover:text-gray-900 min-h-[44px]"
+        <Link
+          href="/"
+          className="mb-4 inline-flex items-center gap-2 text-gray-600 hover:text-gray-900 min-h-[44px]"
         >
           <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
-          Back
-        </button>
+          Back to Gallery
+        </Link>
         <div className="bg-white rounded-lg shadow-lg overflow-hidden">
           <div className="relative aspect-video bg-gray-200">
             <div className="absolute inset-0 m-2 sm:m-3">
