@@ -10,6 +10,8 @@ interface TagCount {
   count: number
 }
 
+export const dynamic = 'force-dynamic'
+
 export const metadata: Metadata = {
   title: 'Tags - MemePix',
   description: 'Browse all tags and discover memes by topic',
