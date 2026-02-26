@@ -46,6 +46,11 @@ export function UploadForm({ onUploadComplete }: UploadFormProps) {
         body: JSON.stringify({ hash }),
       })
 
+      if (res.status === 401) {
+        setState({ status: 'error', error: 'Please sign in to upload' })
+        return
+      }
+
       if (!res.ok) {
         const data = await res.json()
         setState({ status: 'error', error: data.error || 'Upload failed' })
@@ -89,9 +94,19 @@ export function UploadForm({ onUploadComplete }: UploadFormProps) {
       setState({ status: 'ready', imageUrl })
       onUploadComplete(imageUrl)
     } catch (err) {
+      let errorMessage = 'Upload failed'
+      if (err instanceof Error) {
+        if (err.message === 'Failed to fetch' || err.message.includes('NetworkError')) {
+          errorMessage = 'Network error. Please check your connection and try again.'
+        } else if (err.name === 'TypeError' && err.message === 'Failed to fetch') {
+          errorMessage = 'Network error. Please check your connection and try again.'
+        } else {
+          errorMessage = err.message
+        }
+      }
       setState({
         status: 'error',
-        error: err instanceof Error ? err.message : 'Upload failed',
+        error: errorMessage,
       })
     }
   }, [validateFile, onUploadComplete])
