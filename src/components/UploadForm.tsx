@@ -2,8 +2,8 @@
 
 import { useState, useRef, useCallback } from 'react'
 import type { UploadState } from '@/types'
-import { normalizeImage } from '@/lib/image-utils'
 import { calculateMD5Hash } from '@/lib/hash-utils'
+import { normalizeImage } from '@/lib/image-utils'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
@@ -57,48 +57,24 @@ export function UploadForm({ onUploadComplete }: UploadFormProps) {
         return
       }
 
-      const { uploadUrl, imageUrl } = await res.json()
+      const formData = new FormData()
+      formData.append('file', normalized.blob, 'image.jpg')
+      formData.append('hash', hash)
 
-      const arrayBuffer = await normalized.blob.arrayBuffer()
-      
-      try {
-        const uploadRes = await fetch(uploadUrl, {
-          method: 'PUT',
-          body: arrayBuffer,
-          headers: { 
-            'Content-Type': 'image/jpeg',
-            'Content-Length': String(arrayBuffer.byteLength),
-          },
-        })
+      const proxyRes = await fetch('/api/upload-proxy', {
+        method: 'POST',
+        body: formData,
+      })
 
-        if (!uploadRes.ok) {
-          throw new Error('R2 upload failed')
-        }
-
-        setState({ status: 'ready', imageUrl })
-        onUploadComplete(imageUrl)
-        return
-      } catch (uploadErr) {
-        const formData = new FormData()
-        formData.append('file', normalized.blob)
-        formData.append('hash', hash)
-
-        const proxyRes = await fetch('/api/upload-proxy', {
-          method: 'POST',
-          body: formData,
-        })
-
-        if (!proxyRes.ok) {
-          const data = await proxyRes.json()
-          setState({ status: 'error', error: data.error || 'Upload failed' })
-          return
-        }
-
-        const { imageUrl: proxyImageUrl } = await proxyRes.json()
-        setState({ status: 'ready', imageUrl: proxyImageUrl })
-        onUploadComplete(proxyImageUrl)
+      if (!proxyRes.ok) {
+        const data = await proxyRes.json()
+        setState({ status: 'error', error: data.error || 'Upload failed' })
         return
       }
+
+      const { imageUrl: proxyImageUrl } = await proxyRes.json()
+      setState({ status: 'ready', imageUrl: proxyImageUrl })
+      onUploadComplete(proxyImageUrl)
     } catch (err) {
       let errorMessage = 'Upload failed'
       if (err instanceof Error) {

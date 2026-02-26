@@ -1,18 +1,29 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { UploadForm } from '@/components/UploadForm'
 import { ImagePreview } from '@/components/ImagePreview'
 import { CategorySelect } from '@/components/CategorySelect'
 import { TagInput } from '@/components/TagInput'
 import { DescriptionInput } from '@/components/DescriptionInput'
-import { LocationTagSuggestion } from '@/components/LocationTagSuggestion'
 import { MemeGallery } from '@/components/MemeGallery'
 import { MemeDetail } from '@/components/MemeDetail'
 import { CategoryFilter } from '@/components/CategoryFilter'
+import { Header } from '@/components/Header'
+import { Footer } from '@/components/Footer'
 import { AuthButton } from '@/components/AuthButton'
 import type { Meme, UploadState } from '@/types'
+
+function normalizeTag(tag: string): string {
+  return tag
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '_')
+    .replace(/-+/g, '_')
+    .replace(/^_+|_+$/g, '')
+}
 
 export default function Home() {
   const { data: session } = useSession()
@@ -22,12 +33,21 @@ export default function Home() {
   const [category, setCategory] = useState('')
   const [tags, setTags] = useState<string[]>([])
   const [locationTag, setLocationTag] = useState<string | undefined>()
-  const [locationSuggestion, setLocationSuggestion] = useState<string | undefined>()
   const [saving, setSaving] = useState(false)
   const [filterCategory, setFilterCategory] = useState('')
   const [selectedMeme, setSelectedMeme] = useState<Meme | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  useEffect(() => {
+    const handleHashChange = () => {
+      if (window.location.hash === '#upload' && session) {
+        setView('upload')
+      }
+    }
+    handleHashChange()
+    window.addEventListener('hashchange', handleHashChange)
+    return () => window.removeEventListener('hashchange', handleHashChange)
+  }, [session])
 
   const handleUploadComplete = useCallback(async (imageUrl: string) => {
     setUploadState({ status: 'analyzing', imageUrl })
@@ -42,7 +62,12 @@ export default function Home() {
       if (res.ok) {
         const data = await res.json()
         setDescription(data.description || '')
-        setLocationSuggestion(data.locationHint || undefined)
+        
+        if (data.locationHint) {
+          const normalizedHint = normalizeTag(data.locationHint)
+          setLocationTag(normalizedHint)
+          setTags((t) => (t.includes(normalizedHint) ? t : [...t, normalizedHint]))
+        }
         
         const defaultCategory = data.hasTranslation 
           ? 'machine-translation-fails' 
@@ -89,7 +114,6 @@ export default function Home() {
         setCategory('')
         setTags([])
         setLocationTag(undefined)
-        setLocationSuggestion(undefined)
         setView('browse')
         setRefreshKey((k) => k + 1)
       }
@@ -106,108 +130,13 @@ export default function Home() {
     setCategory('')
     setTags([])
     setLocationTag(undefined)
-    setLocationSuggestion(undefined)
-  }
-
-  const handleNavClick = (newView: 'browse' | 'upload') => {
-    setView(newView)
-    setMobileMenuOpen(false)
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <header className="bg-white shadow sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 py-3 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between">
-            <h1 className="text-xl sm:text-2xl font-bold text-gray-900">MemePix</h1>
-            
-            <div className="hidden sm:flex items-center gap-4">
-              <nav className="flex gap-2">
-                <button
-                  onClick={() => handleNavClick('browse')}
-                  className={`px-4 py-2 rounded-lg transition-colors min-h-[44px] ${
-                    view === 'browse'
-                      ? 'bg-blue-600 text-white'
-                      : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                  }`}
-                >
-                  Browse
-                </button>
-                <button
-                  onClick={() => {
-                    if (session) {
-                      handleNavClick('upload')
-                    }
-                  }}
-                  disabled={!session}
-                  className={`px-4 py-2 rounded-lg transition-colors min-h-[44px] ${
-                    view === 'upload'
-                      ? 'bg-blue-600 text-white'
-                      : session
-                      ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                      : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  }`}
-                  title={!session ? 'Sign in to upload' : ''}
-                >
-                  Upload
-                </button>
-              </nav>
-              <AuthButton />
-            </div>
+    <div className="flex flex-col min-h-screen bg-gray-50">
+      <Header activeTab={view === 'upload' && session ? 'upload' : 'browse'} />
 
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="sm:hidden p-2 rounded-lg hover:bg-gray-100 min-h-[44px] min-w-[44px] flex items-center justify-center"
-              aria-label="Toggle menu"
-            >
-              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                {mobileMenuOpen ? (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                ) : (
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-                )}
-              </svg>
-            </button>
-          </div>
-
-          {mobileMenuOpen && (
-            <nav className="sm:hidden pt-3 pb-2 border-t mt-3 space-y-2">
-              <button
-                onClick={() => handleNavClick('browse')}
-                className={`w-full px-4 py-3 rounded-lg transition-colors text-left min-h-[48px] ${
-                  view === 'browse'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                Browse
-              </button>
-              <button
-                onClick={() => {
-                  if (session) {
-                    handleNavClick('upload')
-                  }
-                }}
-                disabled={!session}
-                className={`w-full px-4 py-3 rounded-lg transition-colors text-left min-h-[48px] ${
-                  view === 'upload'
-                    ? 'bg-blue-600 text-white'
-                    : session
-                    ? 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                }`}
-              >
-                Upload {!session && '(Sign in required)'}
-              </button>
-              <div className="pt-2">
-                <AuthButton />
-              </div>
-            </nav>
-          )}
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-4 py-4 sm:py-8 sm:px-6 lg:px-8">
+      <main className="flex-grow w-full max-w-7xl mx-auto px-4 py-4 sm:py-8 sm:px-6 lg:px-8">
         {view === 'browse' ? (
           <div className="space-y-4 sm:space-y-6">
             <CategoryFilter value={filterCategory} onChange={setFilterCategory} />
@@ -223,7 +152,7 @@ export default function Home() {
             <AuthButton />
           </div>
         ) : (
-          <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
+          <div id="upload" className="max-w-2xl mx-auto space-y-4 sm:space-y-6">
             {!uploadState.imageUrl ? (
               <UploadForm onUploadComplete={handleUploadComplete} />
             ) : (
@@ -260,16 +189,7 @@ export default function Home() {
                       <CategorySelect value={category} onChange={setCategory} />
                     </div>
 
-                    {locationSuggestion && !locationTag && (
-                      <LocationTagSuggestion
-                        suggestion={locationSuggestion}
-                        onAccept={(tag) => {
-                          setLocationTag(tag)
-                          setTags((t) => (t.includes(tag) ? t : [...t, tag]))
-                        }}
-                        onReject={() => setLocationSuggestion(undefined)}
-                      />
-                    )}
+
 
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -307,8 +227,11 @@ export default function Home() {
           onClose={() => setSelectedMeme(null)} 
           currentUserEmail={session?.user?.email ?? undefined}
           onDeleted={() => setRefreshKey((k) => k + 1)}
+          onUpdated={(meme) => setSelectedMeme(meme)}
         />
       )}
+
+      <Footer />
     </div>
   )
 }

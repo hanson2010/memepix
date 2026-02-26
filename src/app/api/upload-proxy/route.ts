@@ -2,6 +2,7 @@ import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
 import { NextRequest, NextResponse } from 'next/server'
 import { getEnv } from '@/lib/env'
 import { getAuthSession } from '@/lib/session'
+import sharp from 'sharp'
 
 function getR2Client(): S3Client {
   const env = getEnv()
@@ -55,13 +56,33 @@ export async function POST(request: NextRequest) {
     const key = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${hash}.jpg`
 
     const arrayBuffer = await file.arrayBuffer()
-    const buffer = Buffer.from(arrayBuffer)
+    const inputBuffer = Buffer.from(arrayBuffer)
+
+    const MAX_DIMENSION = 1920
+
+    const metadata = await sharp(inputBuffer).metadata()
+    const needsResizing = metadata.width && metadata.height && (metadata.width > MAX_DIMENSION || metadata.height > MAX_DIMENSION)
+
+    let processedBuffer: Buffer
+    if (needsResizing) {
+      processedBuffer = await sharp(inputBuffer)
+        .resize(MAX_DIMENSION, MAX_DIMENSION, {
+          fit: 'inside',
+          withoutEnlargement: true,
+        })
+        .jpeg({ quality: 85 })
+        .toBuffer()
+    } else {
+      processedBuffer = await sharp(inputBuffer)
+        .jpeg({ quality: 85 })
+        .toBuffer()
+    }
 
     const client = getR2Client()
     const command = new PutObjectCommand({
       Bucket: env.R2_BUCKET_NAME,
       Key: key,
-      Body: buffer,
+      Body: processedBuffer,
       ContentType: 'image/jpeg',
     })
 

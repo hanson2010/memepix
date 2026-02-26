@@ -19,6 +19,7 @@ export function MemeGallery({ initialMemes = EMPTY_MEMES, category, tags, onSele
   const [hasMore, setHasMore] = useState(true)
   const [page, setPage] = useState(0)
   const PAGE_SIZE = 12
+  const hasInitialMemes = initialMemes.length > 0
 
   const fetchMemes = useCallback(async (offset: number) => {
     const params = new URLSearchParams()
@@ -33,6 +34,13 @@ export function MemeGallery({ initialMemes = EMPTY_MEMES, category, tags, onSele
   }, [category, tags])
 
   useEffect(() => {
+    if (hasInitialMemes) {
+      setMemes(initialMemes)
+      setHasMore(initialMemes.length >= PAGE_SIZE)
+      setPage(0)
+      return
+    }
+
     async function loadInitialMemes() {
       setLoading(true)
       setHasMore(true)
@@ -51,73 +59,66 @@ export function MemeGallery({ initialMemes = EMPTY_MEMES, category, tags, onSele
     }
 
     loadInitialMemes()
-  }, [category, tags, fetchMemes])
+  }, [category, tags, fetchMemes, hasInitialMemes, initialMemes])
 
   const loadMore = useCallback(async () => {
-    if (loading || !hasMore) return
+    if (loading || !hasMore || hasInitialMemes) return
 
     setLoading(true)
     try {
-      const newMemes = await fetchMemes((page + 1) * PAGE_SIZE)
+      const nextPage = page + 1
+      const newMemes = await fetchMemes(nextPage * PAGE_SIZE)
+      setMemes((prev) => [...prev, ...newMemes])
       if (newMemes.length < PAGE_SIZE) {
         setHasMore(false)
       }
-      setMemes((prev) => [...prev, ...newMemes])
-      setPage((p) => p + 1)
+      setPage(nextPage)
     } catch (error) {
       console.error('Failed to load more memes:', error)
     } finally {
       setLoading(false)
     }
-  }, [loading, hasMore, page, fetchMemes])
+  }, [loading, hasMore, page, fetchMemes, hasInitialMemes])
+
+  if (memes.length === 0 && !loading) {
+    return (
+      <div className="text-center py-12">
+        <p className="text-gray-500">No memes found</p>
+      </div>
+    )
+  }
 
   return (
-    <div className="space-y-4">
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4">
+    <div className="space-y-6 w-full">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
         {memes.map((meme) => (
-          <div
+          <button
             key={meme.id}
             onClick={() => onSelect?.(meme)}
-            className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden cursor-pointer hover:ring-2 hover:ring-blue-500 transition-all active:scale-[0.98]"
+            className="group relative aspect-square rounded-lg overflow-hidden bg-gray-100"
           >
             <Image
               src={meme.imageUrl}
               alt={meme.description}
               fill
-              className="object-cover"
-              sizes="(max-width: 640px) 100vw, (max-width: 768px) 50vw, (max-width: 1024px) 33vw, 25vw"
+              sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 16vw"
+              className="object-cover transition-transform group-hover:scale-105"
             />
-          </div>
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
+          </button>
         ))}
       </div>
 
-      {loading && (
-        <div className="flex justify-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900" />
-        </div>
-      )}
-
-      {hasMore && !loading && (
-        <div className="flex justify-center py-4">
+      {hasMore && !hasInitialMemes && (
+        <div className="flex justify-center">
           <button
             onClick={loadMore}
-            className="px-6 py-3 sm:py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors min-h-[44px]"
+            disabled={loading}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 min-h-[44px]"
           >
-            Load More
+            {loading ? 'Loading...' : 'Load More'}
           </button>
         </div>
-      )}
-
-      {!hasMore && memes.length > 0 && (
-        <p className="text-center text-gray-500 py-4">
-          No more memes to load
-        </p>
-      )}
-
-      {!loading && memes.length === 0 && (
-        <p className="text-center text-gray-500 py-8">
-          No memes found. Upload some!
-        </p>
       )}
     </div>
   )

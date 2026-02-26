@@ -3,25 +3,28 @@ import { getVisionModel } from '@/lib/gemini'
 
 const ANALYSIS_TIMEOUT = 30000
 
-const TRANSLATION_PROMPT = `Analyze this image for improper or humorous Chinese-to-English translations.
+const ANALYSIS_PROMPT = `Analyze this image and provide location information in English.
 
-Look for:
-1. Chinese text and its English translation
-2. Grammatical errors, mistranslations, or awkward phrasing
-3. Humorous or unintentional meanings
+First, check for Chinese-to-English translations that may be improper or humorous:
+- Grammatical errors, mistranslations, or awkward phrasing
+- Humorous or unintentional meanings
 
-If you find such translations, provide:
-- A brief description of the translation humor or error (2-3 sentences)
-- Any geographical indicators visible (signs, landmarks, place names)
+Then, extract any GPS coordinates from the image EXIF data if available.
 
-If no Chinese-English translation is found, respond with empty values.
+If no EXIF data is found, examine the image for geographical indicators such as:
+- Street signs, road names, traffic signs, and license plates
+- Landmarks and notable buildings
+- Currency or postal codes visible
+- Any text that indicates a specific location
 
-Respond in JSON format:
+Provide your analysis in JSON format:
 {
   "hasTranslation": boolean,
-  "description": "string (description of the translation humor, empty if none found)",
-  "locationHint": "string (location if detected, empty if not)"
-}`
+  "description": "string (description of any translation humor or error, empty if nothing found)",
+  "locationHint": "string (location detected from EXIF or visual indicators, in English, empty if nothing found)"
+}
+
+Always provide locationHint in English if any geographical information is detected, even if no translation is found.`
 
 export async function POST(request: NextRequest) {
   try {
@@ -56,7 +59,7 @@ export async function POST(request: NextRequest) {
     try {
       const result = await Promise.race([
         model.generateContent([
-          { text: TRANSLATION_PROMPT },
+          { text: ANALYSIS_PROMPT },
           {
             inlineData: {
               mimeType: imageData.mimeType,

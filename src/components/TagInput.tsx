@@ -1,22 +1,64 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 
 interface TagInputProps {
   value: string[]
   onChange: (tags: string[]) => void
-  suggestions?: string[]
 }
 
-export function TagInput({ value, onChange, suggestions = [] }: TagInputProps) {
+interface TagSuggestion {
+  name: string
+  count: number
+}
+
+function normalizeTag(tag: string): string {
+  return tag
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, '_')
+    .replace(/-+/g, '_')
+    .replace(/^_+|_+$/g, '')
+}
+
+export function TagInput({ value, onChange }: TagInputProps) {
   const [input, setInput] = useState('')
+  const [allTags, setAllTags] = useState<TagSuggestion[]>([])
+  const [showDropdown, setShowDropdown] = useState(false)
+  const [selectedIndex, setSelectedIndex] = useState(0)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    async function fetchTags() {
+      try {
+        const res = await fetch('/api/tags')
+        const data = await res.json()
+        setAllTags(data.tags || [])
+      } catch (error) {
+        console.error('Failed to fetch tags:', error)
+      }
+    }
+    fetchTags()
+  }, [])
+
+  const suggestions = useMemo(() => {
+    if (input.length < 2) return []
+    const normalized = normalizeTag(input)
+    return allTags.filter((t) => t.name.includes(normalized)).slice(0, 10)
+  }, [input, allTags])
+
+  const shouldShowDropdown = input.length >= 2 && suggestions.length > 0
+  const safeSelectedIndex = Math.min(selectedIndex, suggestions.length - 1)
 
   const addTag = useCallback((tag: string) => {
-    const normalized = tag.toLowerCase().trim()
+    const normalized = normalizeTag(tag)
     if (normalized && !value.includes(normalized)) {
       onChange([...value, normalized])
     }
     setInput('')
+    setShowDropdown(false)
+    inputRef.current?.focus()
   }, [value, onChange])
 
   const removeTag = useCallback((tagToRemove: string) => {
@@ -26,11 +68,23 @@ export function TagInput({ value, onChange, suggestions = [] }: TagInputProps) {
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault()
-      addTag(input)
+      if (shouldShowDropdown && suggestions.length > 0) {
+        addTag(suggestions[safeSelectedIndex].name)
+      } else {
+        addTag(input)
+      }
     } else if (e.key === 'Backspace' && !input && value.length > 0) {
       removeTag(value[value.length - 1])
+    } else if (e.key === 'ArrowDown' && shouldShowDropdown) {
+      e.preventDefault()
+      setSelectedIndex((prev) => Math.min(prev + 1, suggestions.length - 1))
+    } else if (e.key === 'ArrowUp' && shouldShowDropdown) {
+      e.preventDefault()
+      setSelectedIndex((prev) => Math.max(prev - 1, 0))
+    } else if (e.key === 'Escape') {
+      setShowDropdown(false)
     }
-  }, [input, value, addTag, removeTag])
+  }, [input, value, addTag, removeTag, shouldShowDropdown, suggestions, safeSelectedIndex])
 
   return (
     <div className="space-y-2">
@@ -59,29 +113,36 @@ export function TagInput({ value, onChange, suggestions = [] }: TagInputProps) {
 
       <div className="relative">
         <input
+          ref={inputRef}
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
+          onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
+          onFocus={() => {
+            if (shouldShowDropdown) {
+              setShowDropdown(true)
+            }
+          }}
           placeholder="Type a tag and press Enter"
           className="w-full px-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]"
         />
 
-        {input && suggestions.length > 0 && (
+        {showDropdown && suggestions.length > 0 && (
           <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-auto">
-            {suggestions
-              .filter((s) => s.toLowerCase().includes(input.toLowerCase()))
-              .slice(0, 5)
-              .map((suggestion) => (
-                <button
-                  key={suggestion}
-                  type="button"
-                  onClick={() => addTag(suggestion)}
-                  className="w-full px-3 py-3 text-left hover:bg-gray-100 min-h-[48px]"
-                >
-                  {suggestion}
-                </button>
-              ))}
+            {suggestions.map((suggestion, index) => (
+              <button
+                key={suggestion.name}
+                type="button"
+                onClick={() => addTag(suggestion.name)}
+                className={`w-full px-3 py-3 text-left min-h-[48px] flex justify-between items-center ${
+                  index === safeSelectedIndex ? 'bg-blue-50' : 'hover:bg-gray-100'
+                }`}
+              >
+                <span>{suggestion.name}</span>
+                <span className="text-xs text-gray-400">{suggestion.count}</span>
+              </button>
+            ))}
           </div>
         )}
       </div>
