@@ -60,16 +60,25 @@ export function UploadForm({ onUploadComplete }: UploadFormProps) {
       const { uploadUrl, imageUrl } = await res.json()
 
       const arrayBuffer = await normalized.blob.arrayBuffer()
-      const uploadRes = await fetch(uploadUrl, {
-        method: 'PUT',
-        body: arrayBuffer,
-        headers: { 
-          'Content-Type': 'image/jpeg',
-          'Content-Length': String(arrayBuffer.byteLength),
-        },
-      })
+      
+      try {
+        const uploadRes = await fetch(uploadUrl, {
+          method: 'PUT',
+          body: arrayBuffer,
+          headers: { 
+            'Content-Type': 'image/jpeg',
+            'Content-Length': String(arrayBuffer.byteLength),
+          },
+        })
 
-      if (!uploadRes.ok) {
+        if (!uploadRes.ok) {
+          throw new Error('R2 upload failed')
+        }
+
+        setState({ status: 'ready', imageUrl })
+        onUploadComplete(imageUrl)
+        return
+      } catch (uploadErr) {
         const formData = new FormData()
         formData.append('file', normalized.blob)
         formData.append('hash', hash)
@@ -90,15 +99,10 @@ export function UploadForm({ onUploadComplete }: UploadFormProps) {
         onUploadComplete(proxyImageUrl)
         return
       }
-
-      setState({ status: 'ready', imageUrl })
-      onUploadComplete(imageUrl)
     } catch (err) {
       let errorMessage = 'Upload failed'
       if (err instanceof Error) {
-        if (err.message === 'Failed to fetch' || err.message.includes('NetworkError')) {
-          errorMessage = 'Network error. Please check your connection and try again.'
-        } else if (err.name === 'TypeError' && err.message === 'Failed to fetch') {
+        if (err.name === 'TypeError' && err.message === 'Failed to fetch') {
           errorMessage = 'Network error. Please check your connection and try again.'
         } else {
           errorMessage = err.message
