@@ -102,7 +102,8 @@ export async function listMemes(options?: {
   limit?: number
   offset?: number
 }): Promise<Meme[]> {
-  let query = memesCollection()
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let query: any = memesCollection()
   
   if (options?.category) {
     query = query.where('category', '==', options.category)

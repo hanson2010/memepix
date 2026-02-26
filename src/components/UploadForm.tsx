@@ -145,7 +145,6 @@ export function UploadForm({ onUploadComplete }: UploadFormProps) {
           ref={inputRef}
           type="file"
           accept="image/jpeg,image/png,image/gif,image/webp"
-          capture="environment"
           onChange={handleChange}
           className="hidden"
         />
