@@ -37,6 +37,7 @@ export function getDb(): Firestore {
 export const COLLECTIONS = {
   MEMES: 'memes',
   CATEGORIES: 'categories',
+  TAGS: 'tags',
 } as const
 
 export function memesCollection() {
@@ -45,4 +46,8 @@ export function memesCollection() {
 
 export function categoriesCollection() {
   return getDb().collection(COLLECTIONS.CATEGORIES)
+}
+
+export function tagsCollection() {
+  return getDb().collection(COLLECTIONS.TAGS)
 }

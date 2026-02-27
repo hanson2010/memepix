@@ -1,5 +1,6 @@
-import { memesCollection, categoriesCollection } from '@/lib/firebase'
+import { memesCollection, categoriesCollection, tagsCollection } from '@/lib/firebase'
 import { serverTimestamp, toMeme, toMemeList, toCategory, toCategoryList, generateId } from '@/lib/firestore-utils'
+import { FieldValue } from 'firebase-admin/firestore'
 import type { Meme, MemeInput, Category, CategoryInput } from '@/types'
 import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { getEnv } from './env'
@@ -22,6 +23,44 @@ function extractR2Key(imageUrl: string): string | null {
     return url.pathname.slice(1)
   } catch {
     return null
+  }
+}
+
+async function updateTagsOnCreate(tags: string[]): Promise<void> {
+  if (!tags || tags.length === 0) return
+
+  for (const tag of tags) {
+    const tagRef = tagsCollection().doc(tag)
+    await tagRef.set({ count: 0 }, { merge: true })
+    await tagRef.update({ count: FieldValue.increment(1) })
+  }
+}
+
+async function updateTagsOnDelete(tags: string[]): Promise<void> {
+  if (!tags || tags.length === 0) return
+
+  for (const tag of tags) {
+    const tagRef = tagsCollection().doc(tag)
+    await tagRef.update({ count: FieldValue.increment(-1) })
+  }
+}
+
+async function updateTagsOnUpdate(oldTags: string[], newTags: string[]): Promise<void> {
+  const oldSet = new Set(oldTags || [])
+  const newSet = new Set(newTags || [])
+
+  const added = newTags?.filter((t) => !oldSet.has(t)) || []
+  const removed = oldTags?.filter((t) => !newSet.has(t)) || []
+
+  for (const tag of added) {
+    const tagRef = tagsCollection().doc(tag)
+    await tagRef.set({ count: 0 }, { merge: true })
+    await tagRef.update({ count: FieldValue.increment(1) })
+  }
+
+  for (const tag of removed) {
+    const tagRef = tagsCollection().doc(tag)
+    await tagRef.update({ count: FieldValue.increment(-1) })
   }
 }
 
@@ -48,6 +87,11 @@ export async function createMeme(input: MemeInput): Promise<Meme> {
   
   await memesCollection().doc(id).set(data)
   
+  const allTags = input.locationTag 
+    ? [...input.tags, input.locationTag] 
+    : input.tags
+  await updateTagsOnCreate(allTags)
+  
   return {
     id,
     ...input,
@@ -62,6 +106,9 @@ export async function getMeme(id: string): Promise<Meme | null> {
 }
 
 export async function updateMeme(id: string, input: Partial<MemeInput>): Promise<Meme | null> {
+  const existingMeme = await getMeme(id)
+  if (!existingMeme) return null
+  
   const data: Record<string, unknown> = {
     ...input,
     updatedAt: serverTimestamp(),
@@ -73,11 +120,29 @@ export async function updateMeme(id: string, input: Partial<MemeInput>): Promise
   
   await memesCollection().doc(id).update(data)
   
+  const oldAllTags = existingMeme.locationTag 
+    ? [...existingMeme.tags, existingMeme.locationTag]
+    : existingMeme.tags
+  const newAllTags = input.locationTag !== undefined
+    ? [...(input.tags || existingMeme.tags), input.locationTag]
+    : (input.tags || existingMeme.tags)
+  
+  await updateTagsOnUpdate(oldAllTags, newAllTags)
+  
   return getMeme(id)
 }
 
 export async function deleteMeme(id: string, imageUrl?: string): Promise<void> {
+  const meme = await getMeme(id)
+  
   await memesCollection().doc(id).delete()
+  
+  if (meme) {
+    const allTags = meme.locationTag 
+      ? [...meme.tags, meme.locationTag]
+      : meme.tags
+    await updateTagsOnDelete(allTags)
+  }
   
   if (imageUrl) {
     const key = extractR2Key(imageUrl)

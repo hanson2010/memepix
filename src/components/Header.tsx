@@ -49,7 +49,7 @@ export function Header({ activeTab = 'browse' }: HeaderProps) {
               </Link>
               {session && (
                 <Link
-                  href="/#upload"
+                  href="/upload"
                   className={`flex items-center justify-center px-3 sm:px-4 py-2 rounded-lg transition-colors min-h-[44px] text-sm ${getUploadClass()}`}
                 >
                   Upload
@@ -92,7 +92,7 @@ export function Header({ activeTab = 'browse' }: HeaderProps) {
             </Link>
             {session && (
               <Link
-                href="/#upload"
+                href="/upload"
                 onClick={() => setMobileMenuOpen(false)}
                 className={`block px-4 py-3 rounded-lg transition-colors text-left min-h-[48px] text-sm ${getUploadClass()}`}
               >

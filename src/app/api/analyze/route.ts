@@ -3,7 +3,7 @@ import { getVisionModel } from '@/lib/gemini'
 
 const ANALYSIS_TIMEOUT = 30000
 
-const ANALYSIS_PROMPT = `Analyze this image and provide location information in English.
+const ANALYSIS_PROMPT = `Analyze this image and provide tags in English.
 
 First, check for Chinese-to-English translations that may be improper or humorous:
 - Grammatical errors, mistranslations, or awkward phrasing
@@ -21,10 +21,10 @@ Provide your analysis in JSON format:
 {
   "hasTranslation": boolean,
   "description": "string (description of any translation humor or error, empty if nothing found)",
-  "locationHint": "string (location detected from EXIF or visual indicators, in English, empty if nothing found)"
+  "tagsHint": "string (1-3 words or phrases to describe the image in English, comma-separated, if location detected from EXIF or visual indicators, put the city or town name without country name in English at the last position)"
 }
 
-Always provide locationHint in English if any geographical information is detected, even if no translation is found.`
+Provide at least one tagsHint, even if no translation is found.`
 
 export async function POST(request: NextRequest) {
   try {
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         hasTranslation: false,
         description: '',
-        locationHint: '',
+        tagsHint: '',
       })
     }
 
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({
           hasTranslation: false,
           description: '',
-          locationHint: '',
+          tagsHint: '',
         })
       }
 
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({
         hasTranslation: analysis.hasTranslation ?? false,
         description: analysis.description ?? '',
-        locationHint: analysis.locationHint ?? '',
+        tagsHint: analysis.tagsHint ?? '',
       })
     } catch (error) {
       clearTimeout(timeoutId)

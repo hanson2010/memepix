@@ -51,6 +51,7 @@ export async function POST(request: NextRequest) {
       Bucket: env.R2_BUCKET_NAME,
       Key: key,
       ContentType: 'image/jpeg',
+      CacheControl: 'public, max-age=31536000',
     })
     
     const uploadUrl = await getSignedUrl(client, command, { expiresIn: 3600 })

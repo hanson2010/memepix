@@ -45,7 +45,7 @@ export function TagInput({ value, onChange }: TagInputProps) {
   const suggestions = useMemo(() => {
     if (input.length < 2) return []
     const normalized = normalizeTag(input)
-    return allTags.filter((t) => t.name.includes(normalized)).slice(0, 10)
+    return allTags.filter((t) => normalizeTag(t.name).includes(normalized)).slice(0, 10)
   }, [input, allTags])
 
   const shouldShowDropdown = input.length >= 2 && suggestions.length > 0

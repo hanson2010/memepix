@@ -185,7 +185,7 @@ export function MemeDetail({ meme: initialMeme, onClose, currentUserEmail, onDel
               ) : (
                 <div className="mt-2 flex flex-wrap gap-2">
                   {meme.tags.length > 0 ? (
-                    meme.tags.map((tag) => (
+                    [...meme.tags].sort().map((tag) => (
                       <span
                         key={tag}
                         className="px-2 py-1 bg-blue-100 text-blue-800 rounded-full text-sm"

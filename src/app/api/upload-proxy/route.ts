@@ -84,6 +84,7 @@ export async function POST(request: NextRequest) {
       Key: key,
       Body: processedBuffer,
       ContentType: 'image/jpeg',
+      CacheControl: 'public, max-age=31536000',
     })
 
     await client.send(command)
