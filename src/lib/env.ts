@@ -10,6 +10,8 @@ export type Env = {
   NEXTAUTH_SECRET: string
   GITHUB_CLIENT_ID: string
   GITHUB_CLIENT_SECRET: string
+  TURNSTILE_SITE_KEY: string
+  TURNSTILE_SECRET_KEY: string
 }
 
 export function getEnv(): Env {
@@ -25,6 +27,8 @@ export function getEnv(): Env {
     NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET || '',
     GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID || '',
     GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET || '',
+    TURNSTILE_SITE_KEY: process.env.TURNSTILE_SITE_KEY || '',
+    TURNSTILE_SECRET_KEY: process.env.TURNSTILE_SECRET_KEY || '',
   }
 }
 
@@ -40,6 +44,7 @@ export function validateEnv(): void {
     'NEXTAUTH_SECRET',
     'GITHUB_CLIENT_ID',
     'GITHUB_CLIENT_SECRET',
+    'TURNSTILE_SECRET_KEY',
   ]
   
   const missing = required.filter(key => !env[key])

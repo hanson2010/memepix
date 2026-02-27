@@ -38,6 +38,7 @@ export const COLLECTIONS = {
   MEMES: 'memes',
   CATEGORIES: 'categories',
   TAGS: 'tags',
+  UPLOADS: 'uploads',
 } as const
 
 export function memesCollection() {
@@ -50,4 +51,8 @@ export function categoriesCollection() {
 
 export function tagsCollection() {
   return getDb().collection(COLLECTIONS.TAGS)
+}
+
+export function uploadsCollection() {
+  return getDb().collection(COLLECTIONS.UPLOADS)
 }

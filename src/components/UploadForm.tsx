@@ -1,9 +1,10 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import type { UploadState } from '@/types'
 import { calculateMD5Hash } from '@/lib/hash-utils'
 import { normalizeImage } from '@/lib/image-utils'
+import { Turnstile } from '@/components/Turnstile'
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
@@ -15,7 +16,22 @@ interface UploadFormProps {
 export function UploadForm({ onUploadComplete }: UploadFormProps) {
   const [state, setState] = useState<UploadState>({ status: 'pending' })
   const [dragActive, setDragActive] = useState(false)
+  const [pendingFile, setPendingFile] = useState<File | null>(null)
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null)
+  const [turnstileSiteKey, setTurnstileSiteKey] = useState<string>('')
+  const [showCaptcha, setShowCaptcha] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    fetch('/api/config')
+      .then(res => res.json())
+      .then(data => {
+        if (data.siteKey) {
+          setTurnstileSiteKey(data.siteKey)
+        }
+      })
+      .catch(() => {})
+  }, [])
 
   const validateFile = useCallback((file: File): string | null => {
     if (!ALLOWED_TYPES.includes(file.type)) {
@@ -27,7 +43,7 @@ export function UploadForm({ onUploadComplete }: UploadFormProps) {
     return null
   }, [])
 
-  const uploadFile = useCallback(async (file: File) => {
+  const uploadFile = useCallback(async (file: File, token?: string) => {
     const error = validateFile(file)
     if (error) {
       setState({ status: 'error', error })
@@ -43,7 +59,7 @@ export function UploadForm({ onUploadComplete }: UploadFormProps) {
       const res = await fetch('/api/upload', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ hash }),
+        body: JSON.stringify({ hash, turnstileToken: token }),
       })
 
       if (res.status === 401) {
@@ -51,10 +67,35 @@ export function UploadForm({ onUploadComplete }: UploadFormProps) {
         return
       }
 
+      const data = await res.json()
+      
+      if (res.status === 403 && data.requiresCaptcha) {
+        setShowCaptcha(true)
+        setPendingFile(file)
+        setState({ status: 'pending' })
+        return
+      }
+
+      if (res.status === 403) {
+        setState({ status: 'error', error: 'Captcha verification failed' })
+        setTurnstileToken(null)
+        return
+      }
+
       if (!res.ok) {
-        const data = await res.json()
         setState({ status: 'error', error: data.error || 'Upload failed' })
         return
+      }
+
+      if (data.requiresCaptchaNext) {
+        fetch('/api/config')
+          .then(r => r.json())
+          .then(cfg => {
+            if (cfg.siteKey) {
+              setTurnstileSiteKey(cfg.siteKey)
+            }
+          })
+          .catch(() => {})
       }
 
       const formData = new FormData()
@@ -67,8 +108,8 @@ export function UploadForm({ onUploadComplete }: UploadFormProps) {
       })
 
       if (!proxyRes.ok) {
-        const data = await proxyRes.json()
-        setState({ status: 'error', error: data.error || 'Upload failed' })
+        const proxyData = await proxyRes.json()
+        setState({ status: 'error', error: proxyData.error || 'Upload failed' })
         return
       }
 
@@ -91,6 +132,30 @@ export function UploadForm({ onUploadComplete }: UploadFormProps) {
     }
   }, [validateFile, onUploadComplete])
 
+  const handleFileSelect = useCallback((file: File) => {
+    const error = validateFile(file)
+    if (error) {
+      setState({ status: 'error', error })
+      return
+    }
+
+    if (turnstileSiteKey) {
+      setPendingFile(file)
+      setShowCaptcha(true)
+    } else {
+      uploadFile(file)
+    }
+  }, [validateFile, uploadFile, turnstileSiteKey])
+
+  const handleCaptchaSuccess = useCallback((token: string) => {
+    setTurnstileToken(token)
+    setShowCaptcha(false)
+    if (pendingFile) {
+      uploadFile(pendingFile, token)
+      setPendingFile(null)
+    }
+  }, [pendingFile, uploadFile])
+
   const handleDrag = useCallback((e: React.DragEvent) => {
     e.preventDefault()
     e.stopPropagation()
@@ -107,16 +172,16 @@ export function UploadForm({ onUploadComplete }: UploadFormProps) {
     setDragActive(false)
 
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      uploadFile(e.dataTransfer.files[0])
+      handleFileSelect(e.dataTransfer.files[0])
     }
-  }, [uploadFile])
+  }, [handleFileSelect])
 
   const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     e.preventDefault()
     if (e.target.files && e.target.files[0]) {
-      uploadFile(e.target.files[0])
+      handleFileSelect(e.target.files[0])
     }
-  }, [uploadFile])
+  }, [handleFileSelect])
 
   const handleClick = useCallback(() => {
     inputRef.current?.click()
@@ -167,6 +232,19 @@ export function UploadForm({ onUploadComplete }: UploadFormProps) {
           </p>
         </div>
       </div>
+
+      {showCaptcha && turnstileSiteKey && (
+        <div className="mt-4 flex justify-center">
+          <Turnstile
+            siteKey={turnstileSiteKey}
+            onSuccess={handleCaptchaSuccess}
+            onError={() => {
+              setState({ status: 'error', error: 'Captcha failed. Please try again.' })
+              setShowCaptcha(false)
+            }}
+          />
+        </div>
+      )}
 
       {state.status === 'error' && (
         <p className="mt-2 text-sm text-red-600">{state.error}</p>

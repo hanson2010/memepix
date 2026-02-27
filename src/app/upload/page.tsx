@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import { UploadForm } from '@/components/UploadForm'
@@ -32,6 +32,14 @@ export default function UploadPage() {
   const [tags, setTags] = useState<string[]>([])
   const [locationTag, setLocationTag] = useState<string | undefined>()
   const [saving, setSaving] = useState(false)
+  const [allTags, setAllTags] = useState<{ name: string; count: number }[]>([])
+
+  useEffect(() => {
+    fetch('/api/tags')
+      .then(res => res.json())
+      .then(data => setAllTags(data.tags || []))
+      .catch(() => setAllTags([]))
+  }, [])
 
   const handleUploadComplete = useCallback(async (imageUrl: string) => {
     setUploadState({ status: 'analyzing', imageUrl })
@@ -186,7 +194,7 @@ export default function UploadPage() {
                       <label className="block text-sm font-medium text-gray-700 mb-1">
                         Tags
                       </label>
-                      <TagInput value={tags} onChange={setTags} />
+                      <TagInput value={tags} onChange={setTags} preloadedTags={allTags} />
                     </div>
 
                     <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 pt-4">

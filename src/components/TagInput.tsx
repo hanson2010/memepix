@@ -5,10 +5,12 @@ import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 interface TagInputProps {
   value: string[]
   onChange: (tags: string[]) => void
+  preloadedTags?: { name: string; count: number }[]
 }
 
 interface TagSuggestion {
   name: string
+  normalizedName: string
   count: number
 }
 
@@ -22,34 +24,67 @@ function normalizeTag(tag: string): string {
     .replace(/^_+|_+$/g, '')
 }
 
-export function TagInput({ value, onChange }: TagInputProps) {
+export function TagInput({ value, onChange, preloadedTags }: TagInputProps) {
   const [input, setInput] = useState('')
-  const [allTags, setAllTags] = useState<TagSuggestion[]>([])
+  const [suggestions, setSuggestions] = useState<TagSuggestion[]>([])
   const [showDropdown, setShowDropdown] = useState(false)
   const [selectedIndex, setSelectedIndex] = useState(0)
+  const [loading, setLoading] = useState(false)
   const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    async function fetchTags() {
-      try {
-        const res = await fetch('/api/tags')
-        const data = await res.json()
-        setAllTags(data.tags || [])
-      } catch (error) {
-        console.error('Failed to fetch tags:', error)
-      }
+    if (preloadedTags) {
+      setSuggestions(preloadedTags.map(t => ({
+        name: t.name,
+        normalizedName: normalizeTag(t.name),
+        count: t.count,
+      })))
     }
-    fetchTags()
-  }, [])
+  }, [preloadedTags])
 
-  const suggestions = useMemo(() => {
-    if (input.length < 2) return []
+  useEffect(() => {
+    if (input.length < 2) {
+      if (preloadedTags) {
+        setSuggestions(preloadedTags.map(t => ({
+          name: t.name,
+          normalizedName: normalizeTag(t.name),
+          count: t.count,
+        })).slice(0, 10))
+      }
+      return
+    }
+
+    const timer = setTimeout(async () => {
+      setLoading(true)
+      try {
+        const res = await fetch(`/api/tags?q=${encodeURIComponent(input)}`)
+        const data = await res.json()
+        const tags = (data.tags || []).map((t: { name: string; count: number }) => ({
+          name: t.name,
+          normalizedName: normalizeTag(t.name),
+          count: t.count,
+        }))
+        setSuggestions(tags)
+      } catch (error) {
+        console.error('Failed to search tags:', error)
+      } finally {
+        setLoading(false)
+      }
+    }, 150)
+
+    return () => clearTimeout(timer)
+  }, [input, preloadedTags])
+
+  const filteredSuggestions = useMemo(() => {
+    if (input.length < 2) return suggestions.slice(0, 10)
     const normalized = normalizeTag(input)
-    return allTags.filter((t) => normalizeTag(t.name).includes(normalized)).slice(0, 10)
-  }, [input, allTags])
+    return suggestions
+      .filter((t) => t.normalizedName.includes(normalized))
+      .slice(0, 10)
+  }, [input, suggestions])
 
-  const shouldShowDropdown = input.length >= 2 && suggestions.length > 0
-  const safeSelectedIndex = Math.min(selectedIndex, suggestions.length - 1)
+  const shouldShowDropdown = input.length >= 2 && filteredSuggestions.length > 0
+  const safeSelectedIndex = Math.min(selectedIndex, filteredSuggestions.length - 1)
 
   const addTag = useCallback((tag: string) => {
     const normalized = normalizeTag(tag)
@@ -68,8 +103,8 @@ export function TagInput({ value, onChange }: TagInputProps) {
   const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       e.preventDefault()
-      if (shouldShowDropdown && suggestions.length > 0) {
-        addTag(suggestions[safeSelectedIndex].name)
+      if (shouldShowDropdown && filteredSuggestions.length > 0) {
+        addTag(filteredSuggestions[safeSelectedIndex].name)
       } else {
         addTag(input)
       }
@@ -77,14 +112,14 @@ export function TagInput({ value, onChange }: TagInputProps) {
       removeTag(value[value.length - 1])
     } else if (e.key === 'ArrowDown' && shouldShowDropdown) {
       e.preventDefault()
-      setSelectedIndex((prev) => Math.min(prev + 1, suggestions.length - 1))
+      setSelectedIndex((prev) => Math.min(prev + 1, filteredSuggestions.length - 1))
     } else if (e.key === 'ArrowUp' && shouldShowDropdown) {
       e.preventDefault()
       setSelectedIndex((prev) => Math.max(prev - 1, 0))
     } else if (e.key === 'Escape') {
       setShowDropdown(false)
     }
-  }, [input, value, addTag, removeTag, shouldShowDropdown, suggestions, safeSelectedIndex])
+  }, [input, value, addTag, removeTag, shouldShowDropdown, filteredSuggestions, safeSelectedIndex])
 
   return (
     <div className="space-y-2">
@@ -128,9 +163,9 @@ export function TagInput({ value, onChange }: TagInputProps) {
           className="w-full px-3 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[44px]"
         />
 
-        {showDropdown && suggestions.length > 0 && (
+        {showDropdown && filteredSuggestions.length > 0 && (
           <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-md shadow-lg max-h-48 overflow-auto">
-            {suggestions.map((suggestion, index) => (
+            {filteredSuggestions.map((suggestion, index) => (
               <button
                 key={suggestion.name}
                 type="button"

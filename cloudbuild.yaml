@@ -34,7 +34,7 @@ steps:
       - '--set-env-vars'
       - 'GOOGLE_CLOUD_PROJECT=$PROJECT_ID,NEXTAUTH_URL=https://memepix-XXXXX-nw.a.run.app,R2_ENDPOINT=https://your-account-id.r2.cloudflarestorage.com,R2_BUCKET_NAME=meme-pictures'
       - '--set-secrets'
-      - 'GOOGLE_AI_API_KEY=google-ai-api-key:latest,R2_ACCESS_KEY_ID=r2-access-key-id:latest,R2_SECRET_ACCESS_KEY=r2-secret-access-key:latest,R2_PUBLIC_URL=r2-public-url:latest,NEXTAUTH_SECRET=nextauth-secret:latest,GITHUB_CLIENT_ID=github-client-id:latest,GITHUB_CLIENT_SECRET=github-client-secret:latest'
+      - 'GOOGLE_AI_API_KEY=google-ai-api-key:latest,R2_ACCESS_KEY_ID=r2-access-key-id:latest,R2_SECRET_ACCESS_KEY=r2-secret-access-key:latest,R2_PUBLIC_URL=r2-public-url:latest,NEXTAUTH_SECRET=nextauth-secret:latest,GITHUB_CLIENT_ID=github-client-id:latest,GITHUB_CLIENT_SECRET=github-client-secret:latest,TURNSTILE_SECRET_KEY=turnstile-secret-key:latest'
 
 images:
   - 'gcr.io/$PROJECT_ID/memepix:$SHORT_SHA'
