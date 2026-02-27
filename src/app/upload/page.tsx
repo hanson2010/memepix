@@ -62,9 +62,12 @@ export default function UploadPage() {
           })
         }
         
-        const defaultCategory = data.hasTranslation 
-          ? 'machine-translation-fails' 
-          : 'others'
+        let defaultCategory = data.categoryHint || 'others'
+        if (!['natural-landscape', 'city-skyline', 'life-style', 'others'].includes(defaultCategory)) {
+          defaultCategory = data.hasTranslation ? 'machine-translation-fails' : 'others'
+        } else if (data.hasTranslation) {
+          defaultCategory = 'machine-translation-fails'
+        }
         setCategory(defaultCategory)
         
         setUploadState({

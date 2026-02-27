@@ -3,28 +3,23 @@ import { getVisionModel } from '@/lib/gemini'
 
 const ANALYSIS_TIMEOUT = 30000
 
-const ANALYSIS_PROMPT = `Analyze this image and provide tags in English.
+const ANALYSIS_PROMPT = `Analyze this image and return results in JSON format with the following fields:
 
-First, check for Chinese-to-English translations that may be improper or humorous:
-- Grammatical errors, mistranslations, or awkward phrasing
-- Humorous or unintentional meanings
+1. "hasTranslation": boolean - Does the image contain Chinese-to-English translations that are improper, humorous, or have grammatical errors?
 
-Then, extract any GPS coordinates from the image EXIF data if available.
+2. "description": string - If hasTranslation is true, describe the translation humor or error. Otherwise, provide a simple sentence to describe the image.
 
-If no EXIF data is found, examine the image for geographical indicators such as:
-- Street signs, road names, traffic signs, and license plates
-- Landmarks and notable buildings
-- Currency or postal codes visible
-- Any text that indicates a specific location
+3. "categoryHint": string - If hasTranslation is false, categorize the image as one of: "natural-landscape" (mountains, beaches, parks, nature), "city-skyline" (buildings, urban scenes, city views), "life-style" (people, food, daily activities, shopping), "others" (anything that doesn't fit above).
+
+4. "tagsHint": string - Provide up to 4 words or phrases (comma-separated) to describe the image in English. If location is detected from EXIF data or visual indicators (street signs, landmarks, currency, license plates, etc.), include the city or town name WITHOUT country name at the LAST position. For example: "japanese_signage, Akihabara" or "street_food, Bangkok".
 
 Provide your analysis in JSON format:
 {
   "hasTranslation": boolean,
-  "description": "string (description of any translation humor or error, empty if nothing found)",
-  "tagsHint": "string (1-3 words or phrases to describe the image in English, comma-separated, if location detected from EXIF or visual indicators, put the city or town name without country name in English at the last position)"
-}
-
-Provide at least one tagsHint, even if no translation is found.`
+  "description": "string",
+  "categoryHint": "string",
+  "tagsHint": "string"
+}`
 
 export async function POST(request: NextRequest) {
   try {
@@ -92,6 +87,7 @@ export async function POST(request: NextRequest) {
         hasTranslation: analysis.hasTranslation ?? false,
         description: analysis.description ?? '',
         tagsHint: analysis.tagsHint ?? '',
+        categoryHint: analysis.categoryHint ?? 'others',
       })
     } catch (error) {
       clearTimeout(timeoutId)
