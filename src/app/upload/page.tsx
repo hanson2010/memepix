@@ -148,7 +148,7 @@ export default function UploadPage() {
 
       <main className="flex-grow w-full max-w-7xl mx-auto px-4 py-4 sm:py-8 sm:px-6 lg:px-8">
         {!session ? (
-          <div className="max-w-2xl mx-auto text-center py-8 sm:py-12">
+          <div className="max-w-2xl mx-auto flex flex-col items-center py-8 sm:py-12">
             <p className="text-gray-600 mb-4">Please sign in to upload and share pictures.</p>
             <AuthButton />
           </div>
