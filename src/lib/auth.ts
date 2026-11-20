@@ -7,6 +7,9 @@ export const authOptions: NextAuthOptions = {
     GitHubProvider({
       clientId: getEnv().GITHUB_CLIENT_ID,
       clientSecret: getEnv().GITHUB_CLIENT_SECRET,
+      // GitHub now sends an `iss` param on the OAuth callback (RFC 9207);
+      // openid-client rejects it unless the provider declares an issuer.
+      issuer: 'https://github.com/login/oauth',
       httpOptions: {
         timeout: 10000,
       },

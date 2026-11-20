@@ -14,22 +14,62 @@ export type Env = {
   TURNSTILE_SECRET_KEY: string
 }
 
-export function getEnv(): Env {
-  return {
-    NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'http://localhost:3000',
-    GOOGLE_CLOUD_PROJECT: process.env.GOOGLE_CLOUD_PROJECT || '',
-    GOOGLE_AI_API_KEY: process.env.GOOGLE_AI_API_KEY || '',
-    R2_ENDPOINT: process.env.R2_ENDPOINT || '',
-    R2_ACCESS_KEY_ID: process.env.R2_ACCESS_KEY_ID || '',
-    R2_SECRET_ACCESS_KEY: process.env.R2_SECRET_ACCESS_KEY || '',
-    R2_BUCKET_NAME: process.env.R2_BUCKET_NAME || 'memepix-images',
-    R2_PUBLIC_URL: process.env.R2_PUBLIC_URL || '',
-    NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET || '',
-    GITHUB_CLIENT_ID: process.env.GITHUB_CLIENT_ID || '',
-    GITHUB_CLIENT_SECRET: process.env.GITHUB_CLIENT_SECRET || '',
-    TURNSTILE_SITE_KEY: process.env.TURNSTILE_SITE_KEY || '',
-    TURNSTILE_SECRET_KEY: process.env.TURNSTILE_SECRET_KEY || '',
+// Non-sensitive configuration, kept in source. Each value can still be
+// overridden by an environment variable of the same name.
+const PUBLIC_CONFIG = {
+  NEXTAUTH_URL: 'http://localhost:3000',
+  GOOGLE_CLOUD_PROJECT: 'memepix',
+  R2_ENDPOINT: 'https://96e2c7ef58d5e32531e881d705f36851.r2.cloudflarestorage.com',
+  R2_ACCESS_KEY_ID: '85b1237cbf8d52bee5d441bbeab95d4e',
+  R2_BUCKET_NAME: 'meme-pictures',
+  R2_PUBLIC_URL: 'https://meme-pictures.pythoner.work',
+  GITHUB_CLIENT_ID: 'Ov23liIaJxzYgbciamGO',
+  TURNSTILE_SITE_KEY: '0x4AAAAAACjCl4OZj1GWMam0',
+} satisfies Partial<Env>
+
+const SECRET_KEYS = [
+  'GOOGLE_AI_API_KEY',
+  'R2_SECRET_ACCESS_KEY',
+  'NEXTAUTH_SECRET',
+  'GITHUB_CLIENT_SECRET',
+  'TURNSTILE_SECRET_KEY',
+] as const
+
+type SecretKey = (typeof SECRET_KEYS)[number]
+type Secrets = Record<SecretKey, string>
+
+let cachedSecrets: Secrets | null = null
+
+// Sensitive values live in a single Secret Manager secret holding a JSON
+// object, exposed to the container as APP_SECRETS. For local development,
+// either set APP_SECRETS or set each secret as its own environment variable.
+function getSecrets(): Secrets {
+  if (cachedSecrets) return cachedSecrets
+
+  let parsed: Partial<Record<SecretKey, unknown>> = {}
+  if (process.env.APP_SECRETS) {
+    try {
+      parsed = JSON.parse(process.env.APP_SECRETS)
+    } catch {
+      throw new Error('APP_SECRETS is not valid JSON')
+    }
   }
+
+  const secrets = {} as Secrets
+  for (const key of SECRET_KEYS) {
+    const value = parsed[key]
+    secrets[key] = typeof value === 'string' && value ? value : process.env[key] || ''
+  }
+  cachedSecrets = secrets
+  return secrets
+}
+
+export function getEnv(): Env {
+  const pub = Object.fromEntries(
+    Object.entries(PUBLIC_CONFIG).map(([key, value]) => [key, process.env[key] || value])
+  ) as typeof PUBLIC_CONFIG
+
+  return { ...pub, ...getSecrets() }
 }
 
 export function validateEnv(): void {
@@ -46,10 +86,10 @@ export function validateEnv(): void {
     'GITHUB_CLIENT_SECRET',
     'TURNSTILE_SECRET_KEY',
   ]
-  
+
   const missing = required.filter(key => !env[key])
-  
+
   if (missing.length > 0) {
-    throw new Error(`Missing required environment variables: ${missing.join(', ')}`)
+    throw new Error(`Missing required configuration: ${missing.join(', ')}`)
   }
 }

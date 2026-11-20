@@ -59,22 +59,27 @@ Copy the example environment file:
 cp .env.local.example .env.local
 ```
 
-Edit `.env.local` with your credentials:
+Non-sensitive settings are committed in `src/lib/env.ts` (`PUBLIC_CONFIG`). Any of them can be overridden with an environment variable of the same name:
 
-| Variable | Description |
+| Setting | Description |
 |----------|-------------|
 | `NEXTAUTH_URL` | Your app URL (default: http://localhost:3000) |
-| `NEXTAUTH_SECRET` | NextAuth.js secret |
 | `GITHUB_CLIENT_ID` | GitHub OAuth client ID |
-| `GITHUB_CLIENT_SECRET` | GitHub OAuth client secret |
 | `GOOGLE_CLOUD_PROJECT` | Google Cloud project ID |
-| `GOOGLE_AI_API_KEY` | Google Gemini API key |
 | `R2_ENDPOINT` | R2 endpoint URL |
 | `R2_ACCESS_KEY_ID` | R2 access key ID |
-| `R2_SECRET_ACCESS_KEY` | R2 secret access key |
 | `R2_BUCKET_NAME` | R2 bucket name |
 | `R2_PUBLIC_URL` | Public URL for R2 bucket |
 | `TURNSTILE_SITE_KEY` | Cloudflare Turnstile site key |
+
+Put the secrets in `.env.local`, either as individual variables or as one `APP_SECRETS` JSON object:
+
+| Secret | Description |
+|----------|-------------|
+| `NEXTAUTH_SECRET` | NextAuth.js secret |
+| `GITHUB_CLIENT_SECRET` | GitHub OAuth client secret |
+| `GOOGLE_AI_API_KEY` | Google Gemini API key |
+| `R2_SECRET_ACCESS_KEY` | R2 secret access key |
 | `TURNSTILE_SECRET_KEY` | Cloudflare Turnstile secret key |
 
 ### 4. Set up Google Cloud
@@ -158,25 +163,32 @@ npm run lint
 
 The project includes a `cloudbuild.yaml` for automated deployment to Cloud Run.
 
-1. Create secrets in Google Secret Manager:
-    - `nextauth-secret`: NextAuth.js secret
-    - `github-client-id`: GitHub OAuth client ID
-    - `github-client-secret`: GitHub OAuth client secret
-    - `google-ai-api-key`: Gemini API key
-    - `r2-access-key-id`: R2 access key ID
-    - `r2-secret-access-key`: R2 secret access key
-    - `r2-public-url`: R2 public URL
-    - `turnstile-site-key`: Cloudflare Turnstile site key
-    - `turnstile-secret-key`: Cloudflare Turnstile secret key
+1. Create a single JSON secret named `memepix-secrets` in Google Secret Manager:
 
-2. Update `cloudbuild.yaml` with your R2 endpoint URL.
+    ```bash
+    cat > /tmp/memepix-secrets.json <<'JSON'
+    {
+      "NEXTAUTH_SECRET": "...",
+      "GITHUB_CLIENT_SECRET": "...",
+      "GOOGLE_AI_API_KEY": "...",
+      "R2_SECRET_ACCESS_KEY": "...",
+      "TURNSTILE_SECRET_KEY": "..."
+    }
+    JSON
+    gcloud secrets create memepix-secrets --data-file=/tmp/memepix-secrets.json
+    rm /tmp/memepix-secrets.json
+    ```
+
+    To rotate a value, add a new version with `gcloud secrets versions add memepix-secrets --data-file=...` and disable the old version.
+
+2. Update `NEXTAUTH_URL` in `cloudbuild.yaml` and the values in `PUBLIC_CONFIG` (`src/lib/env.ts`) for your deployment.
 
 3. Set up a Cloud Build trigger:
    - Connect your GitHub repository
    - Trigger on push to main branch
    - Use the `cloudbuild.yaml` configuration
 
-4. Grant the Cloud Run service account access to the secrets.
+4. Grant the Cloud Run service account `roles/secretmanager.secretAccessor` on `memepix-secrets`.
 
 ### Manual Deployment
 
