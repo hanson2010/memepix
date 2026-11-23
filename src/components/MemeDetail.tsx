@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import type { Meme } from '@/types'
@@ -10,7 +10,8 @@ import { TagInput } from '@/components/TagInput'
 interface MemeDetailProps {
   meme: Meme
   onClose: () => void
-  currentUserEmail?: string
+  /** Account ID of the signed-in user */
+  currentUserId?: string
   onDeleted?: () => void
   onUpdated?: (meme: Meme) => void
 }
@@ -23,7 +24,18 @@ const CATEGORY_NAMES: Record<string, string> = {
   'others': 'Others',
 }
 
-export function MemeDetail({ meme: initialMeme, onClose, currentUserEmail, onDeleted, onUpdated }: MemeDetailProps) {
+// Open dialogs; the page scrolls again only when the last one closes
+let openDialogs = 0
+
+function lockScroll() {
+  if (openDialogs++ === 0) document.body.style.overflow = 'hidden'
+}
+
+function unlockScroll() {
+  if (--openDialogs === 0) document.body.style.overflow = ''
+}
+
+export function MemeDetail({ meme: initialMeme, onClose, currentUserId, onDeleted, onUpdated }: MemeDetailProps) {
   const [meme, setMeme] = useState(initialMeme)
   const [isEditing, setIsEditing] = useState(false)
   const [editDescription, setEditDescription] = useState(meme.description)
@@ -32,6 +44,21 @@ export function MemeDetail({ meme: initialMeme, onClose, currentUserEmail, onDel
   const [saving, setSaving] = useState(false)
   const [copied, setCopied] = useState(false)
   const [deleting, setDeleting] = useState(false)
+  // Width / height of the picture; on phones the picture box takes this shape
+  const [aspect, setAspect] = useState(4 / 3)
+
+  // Escape closes the dialog; the page behind it does not scroll while it is open
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
+    document.addEventListener('keydown', onKeyDown)
+    lockScroll()
+    return () => {
+      document.removeEventListener('keydown', onKeyDown)
+      unlockScroll()
+    }
+  }, [onClose])
 
   const shareUrl = typeof window !== 'undefined' 
     ? `${window.location.origin}/meme/${meme.id}`
@@ -109,22 +136,26 @@ export function MemeDetail({ meme: initialMeme, onClose, currentUserEmail, onDel
   }
 
   const categoryName = CATEGORY_NAMES[meme.category] || meme.category
-  const canEdit = currentUserEmail && meme.uploadedBy && meme.uploadedBy.toLowerCase() === currentUserEmail.toLowerCase()
+  const canEdit = !!currentUserId && meme.ownerId === currentUserId
 
   return (
-    <div 
-      className="fixed inset-0 z-50 flex items-start sm:items-center justify-center bg-black/50 overflow-y-auto"
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80"
       onClick={onClose}
     >
-      <div 
-        className="relative bg-white w-full sm:max-w-4xl sm:w-full sm:rounded-lg min-h-screen sm:min-h-0 sm:max-h-[90vh] overflow-hidden"
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={meme.description}
+        className="relative bg-white w-full h-full md:w-[96vw] md:max-w-[1600px] md:h-[92vh] md:rounded-lg overflow-y-auto md:overflow-hidden flex flex-col md:flex-row"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="absolute top-3 right-3 z-10 flex gap-2">
           <Link
             href={`/meme/${meme.id}`}
-            className="bg-white/80 rounded-full p-2 hover:bg-white min-h-[44px] min-w-[44px] flex items-center justify-center"
+            className="bg-black/50 text-white rounded-full p-2 hover:bg-black/70 min-h-[44px] min-w-[44px] flex items-center justify-center"
             aria-label="Open in new page"
+            title="Open in new page"
           >
             <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
@@ -132,8 +163,9 @@ export function MemeDetail({ meme: initialMeme, onClose, currentUserEmail, onDel
           </Link>
           <button
             onClick={onClose}
-            className="bg-white/80 rounded-full p-2 hover:bg-white min-h-[44px] min-w-[44px] flex items-center justify-center"
+            className="bg-black/50 text-white rounded-full p-2 hover:bg-black/70 min-h-[44px] min-w-[44px] flex items-center justify-center"
             aria-label="Close"
+            title="Close (Esc)"
           >
             <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -141,20 +173,24 @@ export function MemeDetail({ meme: initialMeme, onClose, currentUserEmail, onDel
           </button>
         </div>
 
-        <div className="flex flex-col md:flex-row h-full">
-          <div className="relative aspect-video md:w-[60%] md:min-h-[400px] bg-gray-200">
-            <div className="absolute inset-0 m-2 sm:m-3">
-              <Image
-                src={meme.imageUrl}
-                alt={meme.description}
-                fill
-                className="object-contain"
-                sizes="(max-width: 768px) 100vw, 60vw"
-              />
-            </div>
-          </div>
+        {/* The picture takes all the space the details column leaves, fitted without cropping */}
+        <div
+          className="relative shrink-0 w-full aspect-(--aspect) max-h-[65vh] md:aspect-auto md:max-h-none md:w-auto md:flex-1 md:min-w-0 bg-neutral-900"
+          style={{ '--aspect': aspect } as React.CSSProperties}
+        >
+          <Image
+            src={meme.imageUrl}
+            alt={meme.description}
+            fill
+            className="object-contain"
+            sizes="(max-width: 768px) 100vw, calc(96vw - 360px)"
+            priority
+            onLoad={(e) => setAspect(e.currentTarget.naturalWidth / e.currentTarget.naturalHeight)}
+          />
+        </div>
 
-          <div className="md:w-[40%] p-4 sm:p-6 space-y-4 overflow-auto">
+        <div className="md:w-[360px] md:shrink-0 md:overflow-y-auto">
+          <div className="p-4 sm:p-6 space-y-4">
             <div>
               <h2 className="text-lg font-semibold text-gray-900">Description</h2>
               {isEditing ? (

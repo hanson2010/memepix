@@ -27,7 +27,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    if (!meme.uploadedBy || meme.uploadedBy.toLowerCase() !== session.user?.email?.toLowerCase()) {
+    if (!meme.ownerId || meme.ownerId !== session.user.id) {
       return NextResponse.json(
         { error: 'Forbidden: You can only delete your own memes' },
         { status: 403 }
@@ -66,7 +66,7 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
       )
     }
 
-    if (!meme.uploadedBy || meme.uploadedBy.toLowerCase() !== session.user?.email?.toLowerCase()) {
+    if (!meme.ownerId || meme.ownerId !== session.user.id) {
       return NextResponse.json(
         { error: 'Forbidden: You can only edit your own memes' },
         { status: 403 }

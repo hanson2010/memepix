@@ -25,7 +25,7 @@ context: |
   Database: Google Firestore (native)
   File storage: Cloudflare R2
   AI services: Google Gemini
-  Testing: Jest Testing Library
+  Testing: Vitest, Testing Library
   Hosting: Google Cloud Run
 
 rules:
@@ -35,3 +35,4 @@ rules:
   specs:
     - Use Given/When/Then format
     - Reference existing patterns before inventing new ones
+skillsScope: project

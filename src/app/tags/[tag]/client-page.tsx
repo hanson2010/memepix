@@ -17,13 +17,13 @@ interface TagPageClientProps {
 export function TagPageClient({ tag, memes }: TagPageClientProps) {
   const [selectedMeme, setSelectedMeme] = useState<Meme | null>(null)
   const { data: session } = useSession()
-  const userEmail = session?.user?.email ?? undefined
+  const userId = session?.user?.id
 
   return (
     <div className="flex flex-col min-h-screen bg-gray-50">
       <Header activeTab="tags" />
       
-      <main className="flex-grow w-full max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+      <main className="flex-grow w-full max-w-page mx-auto px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-6">
           <Link
             href="/tags"
@@ -51,7 +51,7 @@ export function TagPageClient({ tag, memes }: TagPageClientProps) {
         <MemeDetail
           meme={selectedMeme}
           onClose={() => setSelectedMeme(null)}
-          currentUserEmail={userEmail}
+          currentUserId={userId}
           onDeleted={() => {}}
           onUpdated={(meme) => setSelectedMeme(meme)}
         />

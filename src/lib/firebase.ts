@@ -1,6 +1,5 @@
 import { initializeApp, applicationDefault, getApps, App } from 'firebase-admin/app'
 import { getFirestore, Firestore } from 'firebase-admin/firestore'
-import { getEnv } from './env'
 
 let app: App | null = null
 let db: Firestore | null = null
@@ -14,11 +13,9 @@ export function getFirebaseApp(): App {
     return app
   }
   
-  const env = getEnv()
-  
   app = initializeApp({
     credential: applicationDefault(),
-    projectId: env.GOOGLE_CLOUD_PROJECT,
+    projectId: process.env.GOOGLE_CLOUD_PROJECT,
   })
   
   return app
@@ -39,6 +36,10 @@ export const COLLECTIONS = {
   CATEGORIES: 'categories',
   TAGS: 'tags',
   UPLOADS: 'uploads',
+  USERS: 'users',
+  IDENTITIES: 'identities',
+  PENDING_MERGES: 'pendingMerges',
+  MERGES: 'merges',
 } as const
 
 export function memesCollection() {
@@ -55,4 +56,12 @@ export function tagsCollection() {
 
 export function uploadsCollection() {
   return getDb().collection(COLLECTIONS.UPLOADS)
+}
+
+export function usersCollection() {
+  return getDb().collection(COLLECTIONS.USERS)
+}
+
+export function identitiesCollection() {
+  return getDb().collection(COLLECTIONS.IDENTITIES)
 }

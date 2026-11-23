@@ -1,5 +1,5 @@
 import { GoogleGenerativeAI } from '@google/generative-ai'
-import { getEnv } from './env'
+import { secrets } from '@/lib/secrets'
 
 let genAI: GoogleGenerativeAI | null = null
 
@@ -7,13 +7,12 @@ export function getGeminiClient(): GoogleGenerativeAI {
   if (genAI) {
     return genAI
   }
-  
-  const env = getEnv()
-  genAI = new GoogleGenerativeAI(env.GOOGLE_AI_API_KEY)
+
+  genAI = new GoogleGenerativeAI(secrets.googleAiApiKey)
   return genAI
 }
 
 export function getVisionModel() {
   const client = getGeminiClient()
-  return client.getGenerativeModel({ model: 'gemini-2.5-flash-lite' })
+  return client.getGenerativeModel({ model: process.env.GOOGLE_AI_MODEL || 'gemini-3.5-flash-lite' })
 }

@@ -1,0 +1,48 @@
+// Secrets come from the APP_SECRETS JSON object when it is set, otherwise from
+// environment variables. Both use the same names.
+type SecretName =
+  | 'NEXTAUTH_SECRET'
+  | 'GOOGLE_CLIENT_SECRET'
+  | 'GITHUB_CLIENT_SECRET'
+  | 'GOOGLE_AI_API_KEY'
+  | 'R2_SECRET_ACCESS_KEY'
+  | 'TURNSTILE_SECRET_KEY'
+
+let _appSecrets: Partial<Record<SecretName, string>> | null | undefined
+
+function getSecret(name: SecretName): string {
+  if (_appSecrets === undefined) {
+    _appSecrets = null
+    const raw = process.env.APP_SECRETS
+    if (raw) {
+      try {
+        _appSecrets = JSON.parse(raw)
+      } catch {
+        console.error('Failed to parse APP_SECRETS JSON')
+      }
+    }
+  }
+
+  return (_appSecrets ? _appSecrets[name] : process.env[name]) || ''
+}
+
+export const secrets = {
+  get nextauthSecret() {
+    return getSecret('NEXTAUTH_SECRET')
+  },
+  get googleClientSecret() {
+    return getSecret('GOOGLE_CLIENT_SECRET')
+  },
+  get githubClientSecret() {
+    return getSecret('GITHUB_CLIENT_SECRET')
+  },
+  get googleAiApiKey() {
+    return getSecret('GOOGLE_AI_API_KEY')
+  },
+  get r2SecretAccessKey() {
+    return getSecret('R2_SECRET_ACCESS_KEY')
+  },
+  get turnstileSecretKey() {
+    return getSecret('TURNSTILE_SECRET_KEY')
+  },
+}

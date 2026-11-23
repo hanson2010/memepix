@@ -41,8 +41,8 @@ export default function UploadPage() {
       .catch(() => setAllTags([]))
   }, [])
 
-  const handleUploadComplete = useCallback(async (imageUrl: string) => {
-    setUploadState({ status: 'analyzing', imageUrl })
+  const handleUploadComplete = useCallback(async (imageUrl: string, thumbnailUrl?: string) => {
+    setUploadState({ status: 'analyzing', imageUrl, thumbnailUrl })
 
     try {
       const res = await fetch('/api/analyze', {
@@ -81,6 +81,7 @@ export default function UploadPage() {
         setUploadState({
           status: 'ready',
           imageUrl,
+          thumbnailUrl,
           aiSuggestion: {
             description: data.description,
             locationTag: data.tagsHint,
@@ -88,10 +89,10 @@ export default function UploadPage() {
           },
         })
       } else {
-        setUploadState({ status: 'ready', imageUrl })
+        setUploadState({ status: 'ready', imageUrl, thumbnailUrl })
       }
     } catch {
-      setUploadState({ status: 'ready', imageUrl })
+      setUploadState({ status: 'ready', imageUrl, thumbnailUrl })
     }
   }, [])
 
@@ -105,6 +106,7 @@ export default function UploadPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           imageUrl: uploadState.imageUrl,
+          thumbnailUrl: uploadState.thumbnailUrl,
           description,
           category,
           tags,
@@ -146,7 +148,7 @@ export default function UploadPage() {
     <div className="flex flex-col min-h-screen bg-gray-50">
       <Header activeTab="upload" />
 
-      <main className="flex-grow w-full max-w-7xl mx-auto px-4 py-4 sm:py-8 sm:px-6 lg:px-8">
+      <main className="flex-grow w-full max-w-page mx-auto px-4 py-4 sm:py-8 sm:px-6 lg:px-8">
         {!session ? (
           <div className="max-w-2xl mx-auto flex flex-col items-center py-8 sm:py-12">
             <p className="text-gray-600 mb-4">Please sign in to upload and share pictures.</p>

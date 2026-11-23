@@ -1,21 +1,9 @@
-import { memesCollection, categoriesCollection, tagsCollection } from '@/lib/firebase'
+import { getDb, memesCollection, categoriesCollection, tagsCollection } from '@/lib/firebase'
 import { serverTimestamp, toMeme, toMemeList, toCategory, toCategoryList, generateId } from '@/lib/firestore-utils'
 import { FieldValue } from 'firebase-admin/firestore'
 import type { Meme, MemeInput, Category, CategoryInput } from '@/types'
-import { S3Client, DeleteObjectCommand } from '@aws-sdk/client-s3'
-import { getEnv } from './env'
-
-function getR2Client(): S3Client {
-  const env = getEnv()
-  return new S3Client({
-    region: 'auto',
-    endpoint: env.R2_ENDPOINT,
-    credentials: {
-      accessKeyId: env.R2_ACCESS_KEY_ID,
-      secretAccessKey: env.R2_SECRET_ACCESS_KEY,
-    },
-  })
-}
+import { DeleteObjectCommand } from '@aws-sdk/client-s3'
+import { getR2Client, R2_BUCKET_NAME } from '@/lib/r2'
 
 function extractR2Key(imageUrl: string): string | null {
   try {
@@ -26,22 +14,42 @@ function extractR2Key(imageUrl: string): string | null {
   }
 }
 
-async function updateTagsOnCreate(tags: string[]): Promise<void> {
-  if (!tags || tags.length === 0) return
+async function deleteR2Object(key: string): Promise<void> {
+  try {
+    await getR2Client().send(new DeleteObjectCommand({ Bucket: R2_BUCKET_NAME, Key: key }))
+  } catch (error) {
+    console.error(`Failed to delete ${key} from R2:`, error)
+  }
+}
 
-  for (const tag of tags) {
-    const tagRef = tagsCollection().doc(tag)
-    await tagRef.set({ count: 0 }, { merge: true })
-    await tagRef.update({ count: FieldValue.increment(1) })
+// A tag no longer used by any meme gets expiresAt, and Firestore's TTL policy deletes it.
+// Using the tag again clears expiresAt.
+async function incrementTag(tag: string): Promise<void> {
+  await tagsCollection().doc(tag).set(
+    { count: FieldValue.increment(1), expiresAt: FieldValue.delete() },
+    { merge: true }
+  )
+}
+
+async function decrementTag(tag: string): Promise<void> {
+  const tagRef = tagsCollection().doc(tag)
+  await getDb().runTransaction(async (tx) => {
+    const snapshot = await tx.get(tagRef)
+    if (!snapshot.exists) return
+    const count = (snapshot.data()?.count ?? 0) - 1
+    tx.update(tagRef, { count, expiresAt: count > 0 ? FieldValue.delete() : new Date() })
+  })
+}
+
+async function updateTagsOnCreate(tags: string[]): Promise<void> {
+  for (const tag of tags || []) {
+    await incrementTag(tag)
   }
 }
 
 async function updateTagsOnDelete(tags: string[]): Promise<void> {
-  if (!tags || tags.length === 0) return
-
-  for (const tag of tags) {
-    const tagRef = tagsCollection().doc(tag)
-    await tagRef.update({ count: FieldValue.increment(-1) })
+  for (const tag of tags || []) {
+    await decrementTag(tag)
   }
 }
 
@@ -49,18 +57,12 @@ async function updateTagsOnUpdate(oldTags: string[], newTags: string[]): Promise
   const oldSet = new Set(oldTags || [])
   const newSet = new Set(newTags || [])
 
-  const added = newTags?.filter((t) => !oldSet.has(t)) || []
-  const removed = oldTags?.filter((t) => !newSet.has(t)) || []
-
-  for (const tag of added) {
-    const tagRef = tagsCollection().doc(tag)
-    await tagRef.set({ count: 0 }, { merge: true })
-    await tagRef.update({ count: FieldValue.increment(1) })
+  for (const tag of newTags?.filter((t) => !oldSet.has(t)) || []) {
+    await incrementTag(tag)
   }
 
-  for (const tag of removed) {
-    const tagRef = tagsCollection().doc(tag)
-    await tagRef.update({ count: FieldValue.increment(-1) })
+  for (const tag of oldTags?.filter((t) => !newSet.has(t)) || []) {
+    await decrementTag(tag)
   }
 }
 
@@ -82,7 +84,16 @@ export async function createMeme(input: MemeInput): Promise<Meme> {
   }
   
   if (input.uploadedBy !== undefined) {
-    data.uploadedBy = input.uploadedBy
+    // Lowercased so existing memes can be claimed by an equal email (see claimMemes)
+    data.uploadedBy = input.uploadedBy.toLowerCase()
+  }
+
+  if (input.ownerId !== undefined) {
+    data.ownerId = input.ownerId
+  }
+
+  if (input.thumbnailUrl !== undefined) {
+    data.thumbnailUrl = input.thumbnailUrl
   }
   
   await memesCollection().doc(id).set(data)
@@ -95,6 +106,7 @@ export async function createMeme(input: MemeInput): Promise<Meme> {
   return {
     id,
     ...input,
+    uploadedBy: input.uploadedBy?.toLowerCase(),
     createdAt: now,
     updatedAt: now,
   }
@@ -144,20 +156,9 @@ export async function deleteMeme(id: string, imageUrl?: string): Promise<void> {
     await updateTagsOnDelete(allTags)
   }
   
-  if (imageUrl) {
-    const key = extractR2Key(imageUrl)
-    if (key) {
-      try {
-        const env = getEnv()
-        const client = getR2Client()
-        await client.send(new DeleteObjectCommand({
-          Bucket: env.R2_BUCKET_NAME,
-          Key: key,
-        }))
-      } catch (error) {
-        console.error('Failed to delete from R2:', error)
-      }
-    }
+  for (const url of [imageUrl, meme?.thumbnailUrl]) {
+    const key = url ? extractR2Key(url) : null
+    if (key) await deleteR2Object(key)
   }
 }
 

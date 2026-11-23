@@ -1,40 +1,30 @@
-import type { NextAuthOptions } from 'next-auth'
-import GitHubProvider from 'next-auth/providers/github'
-import { getEnv } from './env'
+import NextAuth from 'next-auth'
+import GitHub from 'next-auth/providers/github'
+import Google from 'next-auth/providers/google'
+import { callbacks } from '@/lib/auth-callbacks'
+import { secrets } from '@/lib/secrets'
 
-export const authOptions: NextAuthOptions = {
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  secret: secrets.nextauthSecret,
+  // Host comes from the request; Cloud Run sits behind Google's proxy
+  trustHost: true,
+  // Listed in the order the sign-in page offers them
   providers: [
-    GitHubProvider({
-      clientId: getEnv().GITHUB_CLIENT_ID,
-      clientSecret: getEnv().GITHUB_CLIENT_SECRET,
-      // GitHub now sends an `iss` param on the OAuth callback (RFC 9207);
-      // openid-client rejects it unless the provider declares an issuer.
-      issuer: 'https://github.com/login/oauth',
-      httpOptions: {
-        timeout: 10000,
-      },
+    Google({
+      clientId: process.env.GOOGLE_CLIENT_ID,
+      clientSecret: secrets.googleClientSecret,
+    }),
+    GitHub({
+      clientId: process.env.GITHUB_CLIENT_ID,
+      clientSecret: secrets.githubClientSecret,
     }),
   ],
-  secret: getEnv().NEXTAUTH_SECRET,
   session: {
     strategy: 'jwt',
   },
+  callbacks,
   pages: {
-    signIn: '/',
-    error: '/',
+    signIn: '/auth/signin',
+    error: '/auth/signin',
   },
-  callbacks: {
-    async jwt({ token, account }) {
-      if (account) {
-        token.accessToken = account.access_token
-      }
-      return token
-    },
-    async session({ session, token }) {
-      return {
-        ...session,
-        accessToken: token.accessToken as string | undefined,
-      }
-    },
-  },
-}
+})

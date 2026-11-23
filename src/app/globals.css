@@ -12,6 +12,11 @@
   --font-mono: var(--font-geist-mono);
 }
 
+@theme {
+  /* Page width for header, content and footer (max-w-page); matches the meme dialog's maximum */
+  --container-page: 1600px;
+}
+
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;

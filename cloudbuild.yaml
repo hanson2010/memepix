@@ -1,3 +1,5 @@
+# Builds the image and deploys it to Cloud Run on each push to main
+
 steps:
   - name: 'gcr.io/cloud-builders/docker'
     args:
@@ -7,19 +9,25 @@ steps:
       - '-t'
       - 'gcr.io/$PROJECT_ID/memepix:latest'
       - '.'
-  
+    id: 'build-image'
+
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
       - 'gcr.io/$PROJECT_ID/memepix:$SHORT_SHA'
-  
+    id: 'push-image-sha'
+    waitFor: ['build-image']
+
   - name: 'gcr.io/cloud-builders/docker'
     args:
       - 'push'
       - 'gcr.io/$PROJECT_ID/memepix:latest'
-  
+    id: 'push-image-latest'
+    waitFor: ['build-image']
+
+  # Settings are plain env vars; secrets come from one JSON secret (see src/lib/secrets.ts)
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-    entrypoint: 'gcloud'
+    entrypoint: gcloud
     args:
       - 'run'
       - 'deploy'
@@ -32,10 +40,11 @@ steps:
       - 'managed'
       - '--allow-unauthenticated'
       - '--set-env-vars'
-      - 'GOOGLE_CLOUD_PROJECT=$PROJECT_ID,NEXTAUTH_URL=https://memepix-XXXXX-nw.a.run.app'
-      # All sensitive values live in one JSON secret; see src/lib/env.ts
+      - 'GOOGLE_CLOUD_PROJECT=$PROJECT_ID,NEXTAUTH_URL=https://memepix.pythoner.work,GOOGLE_CLIENT_ID=91153190247-m5s6qs8met0fqbfp1thojeauoahjleq0.apps.googleusercontent.com,GITHUB_CLIENT_ID=Ov23liIaJxzYgbciamGO,R2_ENDPOINT=https://96e2c7ef58d5e32531e881d705f36851.r2.cloudflarestorage.com,R2_ACCESS_KEY_ID=85b1237cbf8d52bee5d441bbeab95d4e,R2_BUCKET_NAME=meme-pictures,R2_PUBLIC_URL=https://meme-pictures.pythoner.work,TURNSTILE_SITE_KEY=0x4AAAAAACjCl4OZj1GWMam0,GOOGLE_AI_MODEL=gemini-3.5-flash-lite'
       - '--set-secrets'
-      - 'APP_SECRETS=memepix-secrets:latest'
+      - 'APP_SECRETS=memepix-app-secrets:latest'
+    id: 'deploy-cloud-run'
+    waitFor: ['push-image-sha']
 
 images:
   - 'gcr.io/$PROJECT_ID/memepix:$SHORT_SHA'
@@ -43,3 +52,6 @@ images:
 
 options:
   logging: CLOUD_LOGGING_ONLY
+  machineType: 'E2_HIGHCPU_8'
+
+timeout: '1200s'

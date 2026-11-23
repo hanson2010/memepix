@@ -10,10 +10,6 @@ export function timestampToDate(timestamp: Timestamp | undefined): Date {
   return timestamp.toDate()
 }
 
-export function dateToTimestamp(date: Date): Timestamp {
-  return Timestamp.fromDate(date)
-}
-
 export function generateId(): string {
   return crypto.randomUUID()
 }
@@ -25,11 +21,13 @@ export function toMeme(doc: FirebaseFirestore.DocumentSnapshot): Meme | null {
   return {
     id: doc.id,
     imageUrl: data?.imageUrl || '',
+    thumbnailUrl: data?.thumbnailUrl,
     description: data?.description || '',
     category: data?.category || '',
     tags: data?.tags || [],
     locationTag: data?.locationTag,
     uploadedBy: data?.uploadedBy,
+    ownerId: data?.ownerId,
     createdAt: timestampToDate(data?.createdAt),
     updatedAt: timestampToDate(data?.updatedAt),
   }

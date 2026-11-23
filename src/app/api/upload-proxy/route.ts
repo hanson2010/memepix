@@ -1,20 +1,9 @@
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
+import { PutObjectCommand } from '@aws-sdk/client-s3'
 import { NextRequest, NextResponse } from 'next/server'
-import { getEnv } from '@/lib/env'
+import { getR2Client, imageKey, publicUrl, R2_BUCKET_NAME, thumbnailKey } from '@/lib/r2'
+import { createThumbnail } from '@/lib/thumbnail'
 import { getAuthSession } from '@/lib/session'
 import sharp from 'sharp'
-
-function getR2Client(): S3Client {
-  const env = getEnv()
-  return new S3Client({
-    region: 'auto',
-    endpoint: env.R2_ENDPOINT,
-    credentials: {
-      accessKeyId: env.R2_ACCESS_KEY_ID,
-      secretAccessKey: env.R2_SECRET_ACCESS_KEY,
-    },
-  })
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -51,9 +40,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const env = getEnv()
-    const now = new Date()
-    const key = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${hash}.jpg`
+    const key = imageKey(hash)
 
     const arrayBuffer = await file.arrayBuffer()
     const inputBuffer = Buffer.from(arrayBuffer)
@@ -63,34 +50,46 @@ export async function POST(request: NextRequest) {
     const metadata = await sharp(inputBuffer).metadata()
     const needsResizing = metadata.width && metadata.height && (metadata.width > MAX_DIMENSION || metadata.height > MAX_DIMENSION)
 
-    let processedBuffer: Buffer
+    // Keep EXIF (camera, date, location) on the stored image. The browser already turned the
+    // pixels upright when it redrew the picture, so the orientation tag is reset to upright;
+    // keeping the original tag would make viewers rotate the picture a second time.
+    let image = sharp(inputBuffer)
     if (needsResizing) {
-      processedBuffer = await sharp(inputBuffer)
-        .resize(MAX_DIMENSION, MAX_DIMENSION, {
-          fit: 'inside',
-          withoutEnlargement: true,
-        })
-        .jpeg({ quality: 85 })
-        .toBuffer()
-    } else {
-      processedBuffer = await sharp(inputBuffer)
-        .jpeg({ quality: 85 })
-        .toBuffer()
+      image = image.resize(MAX_DIMENSION, MAX_DIMENSION, {
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
     }
+    const processedBuffer = await image.withMetadata({ orientation: 1 }).jpeg({ quality: 85 }).toBuffer()
 
-    const client = getR2Client()
     const command = new PutObjectCommand({
-      Bucket: env.R2_BUCKET_NAME,
+      Bucket: R2_BUCKET_NAME,
       Key: key,
       Body: processedBuffer,
       ContentType: 'image/jpeg',
       CacheControl: 'public, max-age=31536000',
     })
 
-    await client.send(command)
-    const imageUrl = `${env.R2_PUBLIC_URL}/${key}`
+    await getR2Client().send(command)
+    const imageUrl = publicUrl(key)
 
-    return NextResponse.json({ imageUrl, key })
+    // Made from the stored image so it matches it exactly; without one the gallery shows the original
+    let thumbnailUrl: string | null = null
+    try {
+      const thumbKey = thumbnailKey(key)
+      await getR2Client().send(new PutObjectCommand({
+        Bucket: R2_BUCKET_NAME,
+        Key: thumbKey,
+        Body: await createThumbnail(processedBuffer),
+        ContentType: 'image/webp',
+        CacheControl: 'public, max-age=31536000',
+      }))
+      thumbnailUrl = publicUrl(thumbKey)
+    } catch (error) {
+      console.error('Error creating thumbnail:', error)
+    }
+
+    return NextResponse.json({ imageUrl, thumbnailUrl, key })
   } catch (error) {
     console.error('Error uploading to R2:', error)
     return NextResponse.json(

@@ -19,7 +19,7 @@ export default function Home() {
     <div className="flex flex-col min-h-screen bg-gray-50">
       <Header activeTab="browse" />
 
-      <main className="flex-grow w-full max-w-7xl mx-auto px-4 py-4 sm:py-8 sm:px-6 lg:px-8">
+      <main className="flex-grow w-full max-w-page mx-auto px-4 py-4 sm:py-8 sm:px-6 lg:px-8">
         <div className="space-y-4 sm:space-y-6">
           <CategoryFilter value={filterCategory} onChange={setFilterCategory} />
           <MemeGallery
@@ -34,7 +34,7 @@ export default function Home() {
         <MemeDetail 
           meme={selectedMeme} 
           onClose={() => setSelectedMeme(null)} 
-          currentUserEmail={session?.user?.email ?? undefined}
+          currentUserId={session?.user?.id}
           onDeleted={() => setRefreshKey((k) => k + 1)}
           onUpdated={(meme) => setSelectedMeme(meme)}
         />

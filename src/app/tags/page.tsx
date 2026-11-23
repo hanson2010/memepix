@@ -61,7 +61,7 @@ export default async function TagsPage() {
     <div className="flex flex-col min-h-screen bg-gray-50">
       <Header activeTab="tags" />
       
-      <main className="flex-grow max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
+      <main className="flex-grow max-w-page mx-auto px-4 py-8 sm:px-6 lg:px-8">
         {tags.length === 0 ? (
           <p className="text-gray-600">No tags yet. Upload some memes with tags to see them here!</p>
         ) : (

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createMeme, listMemes } from '@/lib/meme-service'
 import { getAuthSession } from '@/lib/session'
+import { keyFromPublicUrl } from '@/lib/r2'
 import type { MemeInput } from '@/types'
 
 export async function GET(request: NextRequest) {
@@ -35,7 +36,7 @@ export async function POST(request: NextRequest) {
     
     const body = await request.json()
     
-    const { imageUrl, description, category, tags, locationTag } = body
+    const { imageUrl, thumbnailUrl, description, category, tags, locationTag } = body
     
     if (!imageUrl) {
       return NextResponse.json(
@@ -65,6 +66,12 @@ export async function POST(request: NextRequest) {
       tags: tags || [],
       locationTag: locationTag?.toLowerCase().trim() || undefined,
       uploadedBy: session.user?.email || undefined,
+      ownerId: session.user.id,
+      // Only a thumbnail this app stored; anything else is dropped and the gallery shows imageUrl
+      thumbnailUrl:
+        typeof thumbnailUrl === 'string' && keyFromPublicUrl(thumbnailUrl)?.startsWith('thumbs/')
+          ? thumbnailUrl
+          : undefined,
     }
     
     const meme = await createMeme(input)

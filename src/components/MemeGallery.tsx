@@ -90,7 +90,7 @@ export function MemeGallery({ initialMemes = EMPTY_MEMES, category, tags, onSele
 
   return (
     <div className="space-y-6 w-full">
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 2xl:grid-cols-7 gap-4">
         {memes.map((meme) => (
           <button
             key={meme.id}
@@ -98,10 +98,12 @@ export function MemeGallery({ initialMemes = EMPTY_MEMES, category, tags, onSele
             className="group relative aspect-square rounded-lg overflow-hidden bg-gray-100"
           >
             <Image
-              src={meme.imageUrl}
+              src={meme.thumbnailUrl ?? meme.imageUrl}
               alt={meme.description}
               fill
-              sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, 16vw"
+              // A stored thumbnail is already small; only the original needs resizing
+              unoptimized={!!meme.thumbnailUrl}
+              sizes="(max-width: 640px) 50vw, (max-width: 768px) 33vw, (max-width: 1024px) 25vw, (max-width: 1536px) 16vw, 230px"
               className="object-cover transition-transform group-hover:scale-105"
             />
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />

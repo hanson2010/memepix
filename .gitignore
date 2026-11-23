@@ -128,3 +128,6 @@ dist
 
 # openspec init for kilo code
 .kilocode/
+
+# Speedy Web Compiler cache
+.swc/

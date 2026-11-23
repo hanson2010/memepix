@@ -1,20 +1,21 @@
-import { S3Client, PutObjectCommand } from '@aws-sdk/client-s3'
+import { PutObjectCommand } from '@aws-sdk/client-s3'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import { NextRequest, NextResponse } from 'next/server'
-import { getEnv } from '@/lib/env'
+import { getR2Client, imageKey, R2_BUCKET_NAME, R2_PUBLIC_URL } from '@/lib/r2'
+import { secrets } from '@/lib/secrets'
 import { getAuthSession } from '@/lib/session'
 import { uploadsCollection } from '@/lib/firebase'
 import { FieldValue } from 'firebase-admin/firestore'
 
 async function verifyTurnstile(token: string): Promise<boolean> {
-  const env = getEnv()
-  if (!env.TURNSTILE_SECRET_KEY) {
+  const secretKey = secrets.turnstileSecretKey
+  if (!secretKey) {
     return true
   }
 
   const formData = new FormData()
   formData.append('response', token)
-  formData.append('secret', env.TURNSTILE_SECRET_KEY)
+  formData.append('secret', secretKey)
 
   try {
     const result = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
@@ -26,18 +27,6 @@ async function verifyTurnstile(token: string): Promise<boolean> {
   } catch {
     return false
   }
-}
-
-function getR2Client(): S3Client {
-  const env = getEnv()
-  return new S3Client({
-    region: 'auto',
-    endpoint: env.R2_ENDPOINT,
-    credentials: {
-      accessKeyId: env.R2_ACCESS_KEY_ID,
-      secretAccessKey: env.R2_SECRET_ACCESS_KEY,
-    },
-  })
 }
 
 const UPLOAD_LIMIT = 10
@@ -69,10 +58,9 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const env = getEnv()
     const cutoff = new Date(Date.now() - TIME_WINDOW_MINUTES * 60 * 1000)
     const snapshot = await uploadsCollection()
-      .where('email', '==', session.user?.email?.toLowerCase())
+      .where('ownerId', '==', session.user.id)
       .where('timestamp', '>', cutoff)
       .count()
       .get()
@@ -80,7 +68,7 @@ export async function POST(request: NextRequest) {
     const uploadCount = snapshot.data().count
     const requiresCaptcha = uploadCount >= UPLOAD_LIMIT
 
-    if (requiresCaptcha && env.TURNSTILE_SECRET_KEY) {
+    if (requiresCaptcha && secrets.turnstileSecretKey) {
       if (!turnstileToken) {
         return NextResponse.json(
           { error: 'Captcha required', requiresCaptcha: true },
@@ -97,24 +85,26 @@ export async function POST(request: NextRequest) {
     }
 
     await uploadsCollection().add({
+      ownerId: session.user.id,
+      // Kept so the previous version, which counts by email, still works after a rollback
       email: session.user?.email?.toLowerCase(),
       timestamp: FieldValue.serverTimestamp(),
       hash,
+      // Deleted by Firestore's TTL policy once outside the rate-limit window
+      expiresAt: new Date(Date.now() + TIME_WINDOW_MINUTES * 60 * 1000),
     })
     
-    const now = new Date()
-    const key = `${now.getFullYear()}/${String(now.getMonth() + 1).padStart(2, '0')}/${hash}.jpg`
-    
-    const client = getR2Client()
+    const key = imageKey(hash)
+
     const command = new PutObjectCommand({
-      Bucket: env.R2_BUCKET_NAME,
+      Bucket: R2_BUCKET_NAME,
       Key: key,
       ContentType: 'image/jpeg',
       CacheControl: 'public, max-age=31536000',
     })
     
-    const uploadUrl = await getSignedUrl(client, command, { expiresIn: 3600 })
-    const imageUrl = `${env.R2_PUBLIC_URL}/${key}`
+    const uploadUrl = await getSignedUrl(getR2Client(), command, { expiresIn: 3600 })
+    const imageUrl = `${R2_PUBLIC_URL}/${key}`
     
     const newCount = uploadCount + 1
     return NextResponse.json({

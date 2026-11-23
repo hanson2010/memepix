@@ -102,7 +102,7 @@ export function MemeDetailPage({ meme: initialMeme }: MemeDetailPageProps) {
   }
 
   const categoryName = CATEGORY_NAMES[meme.category] || meme.category
-  const canEdit = session?.user?.email && meme.uploadedBy && meme.uploadedBy.toLowerCase() === session.user.email.toLowerCase()
+  const canEdit = !!session?.user?.id && meme.ownerId === session.user.id
 
   return (
     <div className="min-h-screen bg-gray-50">

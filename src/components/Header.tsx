@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useSession } from 'next-auth/react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { AuthButton } from '@/components/AuthButton'
 
@@ -27,10 +28,14 @@ export function Header({ activeTab = 'browse' }: HeaderProps) {
 
   return (
     <header className="bg-white shadow sticky top-0 z-40">
-      <div className="max-w-7xl mx-auto px-4 py-3 sm:px-6 lg:px-8">
+      <div className="max-w-page mx-auto px-4 py-3 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between">
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-            <Link href="/">MemePix</Link>
+            <Link href="/" className="flex items-center gap-2">
+              {/* Decorative: the name next to it already says where the link goes */}
+              <Image src="/icon-192.png" alt="" width={32} height={32} className="w-8 h-8 rounded-lg" priority />
+              MemePix
+            </Link>
           </h1>
           
           <div className="hidden sm:flex items-center gap-4">

@@ -10,7 +10,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024
 const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
 
 interface UploadFormProps {
-  onUploadComplete: (imageUrl: string) => void
+  onUploadComplete: (imageUrl: string, thumbnailUrl?: string) => void
 }
 
 export function UploadForm({ onUploadComplete }: UploadFormProps) {
@@ -113,9 +113,9 @@ export function UploadForm({ onUploadComplete }: UploadFormProps) {
         return
       }
 
-      const { imageUrl: proxyImageUrl } = await proxyRes.json()
-      setState({ status: 'ready', imageUrl: proxyImageUrl })
-      onUploadComplete(proxyImageUrl)
+      const { imageUrl: proxyImageUrl, thumbnailUrl } = await proxyRes.json()
+      setState({ status: 'ready', imageUrl: proxyImageUrl, thumbnailUrl: thumbnailUrl ?? undefined })
+      onUploadComplete(proxyImageUrl, thumbnailUrl ?? undefined)
     } catch (err) {
       let errorMessage = 'Upload failed'
       if (err instanceof Error) {
