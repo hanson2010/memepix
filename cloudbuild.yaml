@@ -40,7 +40,7 @@ steps:
       - 'managed'
       - '--allow-unauthenticated'
       - '--set-env-vars'
-      - 'GOOGLE_CLOUD_PROJECT=$PROJECT_ID,NEXTAUTH_URL=https://memepix.pythoner.work,GOOGLE_CLIENT_ID=91153190247-m5s6qs8met0fqbfp1thojeauoahjleq0.apps.googleusercontent.com,GITHUB_CLIENT_ID=Ov23liIaJxzYgbciamGO,R2_ENDPOINT=https://96e2c7ef58d5e32531e881d705f36851.r2.cloudflarestorage.com,R2_ACCESS_KEY_ID=85b1237cbf8d52bee5d441bbeab95d4e,R2_BUCKET_NAME=meme-pictures,R2_PUBLIC_URL=https://meme-pictures.pythoner.work,TURNSTILE_SITE_KEY=0x4AAAAAACjCl4OZj1GWMam0,GOOGLE_AI_MODEL=gemini-3.5-flash-lite'
+      - 'GOOGLE_CLOUD_PROJECT=$PROJECT_ID,NEXTAUTH_URL=https://memepix.pythoner.work,GOOGLE_CLIENT_ID=91153190247-m5s6qs8met0fqbfp1thojeauoahjleq0.apps.googleusercontent.com,GITHUB_CLIENT_ID=Ov23lipye9AFTFDe112F,R2_ENDPOINT=https://96e2c7ef58d5e32531e881d705f36851.r2.cloudflarestorage.com,R2_ACCESS_KEY_ID=85b1237cbf8d52bee5d441bbeab95d4e,R2_BUCKET_NAME=meme-pictures,R2_PUBLIC_URL=https://meme-pictures.pythoner.work,TURNSTILE_SITE_KEY=0x4AAAAAACjCl4OZj1GWMam0,GOOGLE_AI_MODEL=gemini-3.5-flash-lite'
       - '--set-secrets'
       - 'APP_SECRETS=memepix-app-secrets:latest'
     id: 'deploy-cloud-run'
