@@ -131,3 +131,7 @@ dist
 
 # Speedy Web Compiler cache
 .swc/
+
+# Local AI agent configuration
+.agents/
+.claude/
